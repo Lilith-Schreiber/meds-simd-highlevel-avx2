@@ -56,23 +56,18 @@ void pmod_mat_mul_vec(pmod_vec_t *C, int C_r, int C_c, pmod_vec_t *A, int A_r,
         val = ADD(val, MULLO(pmod_mat_entry(A, A_r, A_c, r, i),
                              pmod_mat_entry(B, B_r, B_c, i, c)));
       }
-      // tmp[r * C_c + c] = GF_mod_vec(val);
-      C[r * C_c + c] = GF_mod_vec(val);
+      tmp[r * C_c + c] = GF_mod_vec(val);
+      // C[r * C_c + c] = GF_mod_vec(val);
+      // pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
     }
 
-  // for (int c = 0; c < C_c; c++)
-  //   for (int r = 0; r < C_r; r++)
-  //     pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++)
+      pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
 }
 
 int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c) {
   if (pmod_mat_row_echelon_ct(M, M_r, M_c) < 0) return -1;
-
-  return pmod_mat_back_substitution_ct(M, M_r, M_c);
-}
-
-int pmod_mat_syst_ct_comp(pmod_mat_t *M, int M_r, int M_c, int show) {
-  if (pmod_mat_row_echelon_ct_comp(M, M_r, M_c, show) < 0) return -1;
 
   return pmod_mat_back_substitution_ct(M, M_r, M_c);
 }
@@ -109,23 +104,13 @@ void pmod_mat_back_substitution_ct_vec(pmod_vec_t *M, int M_r, int M_c) {
     }
 }
 
-void pmod_mat_syst_ct_vec(pmod_mat_t *Ms[], int M_r, int M_c) {
-  // __m256i full_mask = _mm256_set1_epi16(0xFFFF);
+pmod_vec_mask_t pmod_mat_syst_ct_vec(pmod_vec_t *M, int M_r, int M_c) {
   const pmod_vec_t zero = SET1(0);
   const pmod_vec_t p = SET1(MEDS_p);
 
   __mmask16 valid = 0xFFFF;
 
-  pmod_vec_t M[M_r * M_c];
   for (int r = 0; r < M_r; r++) {
-    for (int c = 0; c < M_c; c++) {
-      M[r * M_c + c] = pmod_mat_entry_vec(Ms, M_r, M_c, r, c);
-    }
-  }
-
-  for (int r = 0; r < M_r; r++) {
-    // continue;
-    // swap
     for (int r2 = r + 1; r2 < M_r; r2++) {
       pmod_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
       __mmask16 Mrr_eq_zero = EQ(Mrr, zero);
@@ -140,23 +125,14 @@ void pmod_mat_syst_ct_vec(pmod_mat_t *Ms[], int M_r, int M_c) {
       }
     }
 
-    // for (int i = 0; i < 5; i++) {
-    //   printf("%10d", extract(pmod_mat_entry(M, M_r, M_c, r, i)));
-    // }
-    // printf("\n");
-
     pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r, r);
-    __mmask16 val_eq_zero = EQ(val, zero);
-    valid = valid & val_eq_zero;
+    __mmask16 val_neq_zero = NEQ(val, zero);
+    valid = valid & val_neq_zero;
 
     val = GF_inv_vec(val);
-    // printf("val (simd): %d\n", extract(val));
     for (int c = r; c < M_c; c++) {
       pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
-      // pmod_vec_t res = modulo(MULLO(Mrc, val));
       pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
-      // if (c == r)
-      //   printf("res: %d\n", extract(res));
       pmod_mat_set_entry(M, M_r, M_c, r, c, res);
     }
 
@@ -166,15 +142,10 @@ void pmod_mat_syst_ct_vec(pmod_mat_t *Ms[], int M_r, int M_c) {
       for (int c = r; c < M_c; c++) {
         pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
-
-        // pmod_vec_t val = modulo(MULLO(tmp0, factor));
         pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
         val = SUB(tmp1, val);
 
         val = ADD_M(val, p, LT(val, zero));
-
-        // if (c == r && r2 == r + 1)
-        //   printf("simd val: %d\n", extract(val));
 
         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
@@ -183,78 +154,7 @@ void pmod_mat_syst_ct_vec(pmod_mat_t *Ms[], int M_r, int M_c) {
 
   pmod_mat_back_substitution_ct_vec(M, M_r, M_c);
 
-  for (int r = 0; r < M_r; r++) {
-    for (int c = 0; c < M_c; c++) {
-      // M[r * M_c + c] = pmod_mat_entry_simd(M_sisd, M_r, M_c, r, c);
-      pmod_mat_set_entry_vec(Ms, M_r, M_c, r, c, M[r * M_c + c]);
-    }
-  }
-}
-
-int pmod_mat_row_echelon_ct_comp(pmod_mat_t *M, int M_r, int M_c, int show) {
-  for (int r = 0; r < M_r; r++) {
-    // continue;
-    // swap
-    for (int r2 = r + 1; r2 < M_r; r2++) {
-      uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
-
-      for (int c = r; c < M_c; c++) {
-        uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
-
-        uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
-
-        pmod_mat_set_entry(M, M_r, M_c, r, c,
-                           (Mrc + val * (Mrr == 0)) % MEDS_p);
-      }
-    }
-    // if (show) {
-    //   for (int i = 0; i < 5; i++) {
-    //     printf("%10d", pmod_mat_entry(M, M_r, M_c, r, i));
-    //   }
-    //   printf("\n");
-    // }
-
-    uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
-
-    if (val == 0) return -1;
-
-    val = GF_inv(val);
-    // if (show) {
-    //   printf("val: %d\n", val);
-    // }
-
-    // normalize
-    for (int c = r; c < M_c; c++) {
-      uint64_t tmp =
-          ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
-      // if (show && c == r)
-      //   printf("tmp: %d\n", tmp);
-      pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
-    }
-
-    // eliminate
-    for (int r2 = r + 1; r2 < M_r; r2++) {
-      uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
-
-      for (int c = r; c < M_c; c++) {
-        uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
-        uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
-
-        int64_t val = (tmp0 * factor) % MEDS_p;
-
-        val = tmp1 - val;
-
-        val += MEDS_p * (val < 0);
-
-        // if (c == r && r2 == r + 1 && show)
-        //   printf("comp val: %d\n", val);
-
-        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
-      }
-    }
-  }
-
-  return 0;
+  return valid;
 }
 
 int pmod_mat_row_echelon_ct(pmod_mat_t *M, int M_r, int M_c) {

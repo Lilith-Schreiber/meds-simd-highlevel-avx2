@@ -15,6 +15,7 @@
 #include "randombytes.h"
 #include "seed.h"
 #include "util.h"
+#include "vec.h"
 
 #define CEILING(x, y) (((x) + (y)-1) / (y))
 
@@ -33,7 +34,7 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   open_measure_log(measure_log_file);
 
   double freq = osfreq();
-  LOG_M("Generating keypairs...\n\n");
+  // LOG_M("Generating keypairs...\n\n");
 
   /**
     Generate G0
@@ -194,31 +195,31 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   }
 
   END(gen_all_pm_sm_time);
-  LOG_M("  generate G, A, B (%d loops):\n", MEDS_s - 1);
-  LOG_M("    %f   (%llu cycles)\n", gen_all_pm_sm_time / freq,
-        gen_all_pm_sm_time);
+  // LOG_M("  generate G, A, B (%d loops):\n", MEDS_s - 1);
+  // LOG_M("    %f   (%llu cycles)\n", gen_all_pm_sm_time / freq,
+  //       gen_all_pm_sm_time);
 
   // LOG_M("    max loop time:\n");
-  LOG_M("    loop time:\n");
-  LOG_M("      %f   (%llu cycles)\n", gen_pm_sm_time_min / freq,
-        gen_pm_sm_time_min);
-
-  LOG_M("    calculate TG:\n");
-  LOG_M("      %f   (%llu cycles)\n", gen_G0p_time_min / freq,
-        gen_G0p_time_min);
-
-  LOG_M("    solve A, B:\n");
-  LOG_M("      %f   (%llu cycles)\n", solve_time_min / freq, solve_time_min);
-
-  LOG_M("    check A, B invertible:\n");
-  LOG_M("      %f   (%llu cycles)\n", check_AB_inv_time_min / freq,
-        check_AB_inv_time_min);
-
-  LOG_M("    calculate pi:\n");
-  LOG_M("      %f   (%llu cycles)\n", pi_time_min / freq, pi_time_min);
-
-  LOG_M("    calculate syst form:\n");
-  LOG_M("      %f   (%llu cycles)\n", syst_time_min / freq, syst_time_min);
+  // LOG_M("    loop time:\n");
+  // LOG_M("      %f   (%llu cycles)\n", gen_pm_sm_time_min / freq,
+  //       gen_pm_sm_time_min);
+  //
+  // LOG_M("    calculate TG:\n");
+  // LOG_M("      %f   (%llu cycles)\n", gen_G0p_time_min / freq,
+  //       gen_G0p_time_min);
+  //
+  // LOG_M("    solve A, B:\n");
+  // LOG_M("      %f   (%llu cycles)\n", solve_time_min / freq, solve_time_min);
+  //
+  // LOG_M("    check A, B invertible:\n");
+  // LOG_M("      %f   (%llu cycles)\n", check_AB_inv_time_min / freq,
+  //       check_AB_inv_time_min);
+  //
+  // LOG_M("    calculate pi:\n");
+  // LOG_M("      %f   (%llu cycles)\n", pi_time_min / freq, pi_time_min);
+  //
+  // LOG_M("    calculate syst form:\n");
+  // LOG_M("      %f   (%llu cycles)\n", syst_time_min / freq, syst_time_min);
 
   /**
     Copy public data to bytes
@@ -306,11 +307,23 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
   //  LOG_M("  copy secret data:\n");
   //  LOG_M("    %f   (%llu cycles)\n", copy_sk_time / freq, copy_sk_time);
 
-  LOG_M("\nKeypairs generated\n\n");
+  // LOG_M("\nKeypairs generated\n\n");
 
   close_measure_log();
 
   return 0;
+}
+
+void print_matrix(const char *message, pmod_mat_t *M, int M_r, int M_c) {
+  printf(message);
+
+  for (int i = 0; i < M_r; i++) {
+    for (int j = 0; j < M_c; j++) {
+      printf("%5d", M[i * M_c + j]);
+    }
+    printf("\n");
+  }
+  printf("\n");
 }
 
 int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
@@ -406,49 +419,134 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     **/
   START(gen_rsp_time);
 
-  pmod_mat_t A_tilde_data[MEDS_t * MEDS_m * MEDS_m];
-  pmod_mat_t B_tilde_data[MEDS_t * MEDS_n * MEDS_n];
+  pmod_mat_t A_tilde_data[MEDS_t][MEDS_m * MEDS_m];
+  pmod_mat_t B_tilde_data[MEDS_t][MEDS_n * MEDS_n];
+  pmod_mat_t A_tilde_dump[MEDS_m * MEDS_m];
+  pmod_mat_t B_tilde_dump[MEDS_m * MEDS_m];
 
-  pmod_mat_t *A_tilde[MEDS_t];
-  pmod_mat_t *B_tilde[MEDS_t];
+  pmod_mat_t *A_tilde[MEDS_t << 1];
+  pmod_mat_t *B_tilde[MEDS_t << 1];
 
   for (int i = 0; i < MEDS_t; i++) {
-    A_tilde[i] = &A_tilde_data[i * MEDS_m * MEDS_m];
-    B_tilde[i] = &B_tilde_data[i * MEDS_n * MEDS_n];
+    A_tilde[i] = A_tilde_data[i];
+    B_tilde[i] = B_tilde_data[i];
+  }
+  for (int i = MEDS_t; i < MEDS_t << 1; i++) {
+    A_tilde[i] = A_tilde_dump;
+    B_tilde[i] = B_tilde_dump;
   }
 
   keccak_state h_shake;
   shake256_init(&h_shake);
 
-  pmod_mat_t Gs_data[16 * MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_t *Gs[16];
-  for (int i = 0; i < 16; i++) Gs[i] = &Gs_data[i * MEDS_k * MEDS_m * MEDS_n];
+  pmod_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_vec_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
 
-  for (int i = 0; i < MEDS_t; i++) {
-    uint8_t sigma_A_tilde_i[MEDS_st_seed_bytes];
-    uint8_t sigma_B_tilde_i[MEDS_st_seed_bytes];
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1(G_0[i]);
 
-    XOF((uint8_t *[]){sigma_A_tilde_i, sigma_B_tilde_i,
-                      &sigma[i * MEDS_st_seed_bytes]},
-        (size_t[]){MEDS_st_seed_bytes, MEDS_st_seed_bytes, MEDS_st_seed_bytes},
-        &sigma[i * MEDS_st_seed_bytes], MEDS_st_seed_bytes, 3);
+  pmod_vec_t A_vec[MEDS_m * MEDS_m];
+  pmod_vec_t B_vec[MEDS_n * MEDS_n];
 
-    rnd_inv_matrix(A_tilde[i], MEDS_m, MEDS_m, sigma_A_tilde_i,
-                   MEDS_st_seed_bytes);
-    rnd_inv_matrix(B_tilde[i], MEDS_n, MEDS_n, sigma_B_tilde_i,
-                   MEDS_st_seed_bytes);
+  static pmod_mat_t Gs_data[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t Gs_dump[MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t *Gs[MEDS_t << 1];
 
-    LOG_MAT_FMT(A_tilde[i], MEDS_m, MEDS_m, "A_tilde[%i]", i);
-    LOG_MAT_FMT(B_tilde[i], MEDS_n, MEDS_n, "B_tilde[%i]", i);
+  for (int i = 0; i < MEDS_t; i++) Gs[i] = Gs_data[i];
+  for (int i = MEDS_t; i < MEDS_t << 1; i++) Gs[i] = Gs_dump;
+
+  int num_valid = 0;
+  int num_invalid = 0;
+
+  int num_tried = 0;
+  int indexes[MEDS_t << 1];
+
+  for (int i = 0; i < MEDS_t; i++) indexes[i] = i;
+  for (int i = MEDS_t; i < (MEDS_t << 1); i++) indexes[i] = 0;
+
+  long long pi_time_min = (1ll << 62);
+  long long syst_time_min = (1ll << 62);
+
+  while (num_valid < MEDS_t) {
+    for (int t = 0; t < 16; t++) {
+      if (t + num_tried >= MEDS_t + num_invalid) break;
+
+      int i = indexes[t + num_tried];
+
+      uint8_t sigma_A_tilde_i[MEDS_st_seed_bytes];
+      uint8_t sigma_B_tilde_i[MEDS_st_seed_bytes];
+
+      XOF((uint8_t *[]){sigma_A_tilde_i, sigma_B_tilde_i,
+                        &sigma[i * MEDS_st_seed_bytes]},
+          (size_t[]){MEDS_st_seed_bytes, MEDS_st_seed_bytes,
+                     MEDS_st_seed_bytes},
+          &sigma[i * MEDS_st_seed_bytes], MEDS_st_seed_bytes, 3);
+
+      rnd_inv_matrix(A_tilde[i], MEDS_m, MEDS_m, sigma_A_tilde_i,
+                     MEDS_st_seed_bytes);
+      rnd_inv_matrix(B_tilde[i], MEDS_n, MEDS_n, sigma_B_tilde_i,
+                     MEDS_st_seed_bytes);
+
+      LOG_MAT_FMT(A_tilde[i], MEDS_m, MEDS_m, "A_tilde[%i]", i);
+      LOG_MAT_FMT(B_tilde[i], MEDS_n, MEDS_n, "B_tilde[%i]", i);
+    }
+
+    for (int i = 0; i < MEDS_m * MEDS_m; i++)
+      A_vec[i] =
+          pmod_mat_entry_vec(A_tilde + num_tried, 1, MEDS_m * MEDS_m, 0, i);
+    for (int i = 0; i < MEDS_n * MEDS_n; i++)
+      B_vec[i] =
+          pmod_mat_entry_vec(B_tilde + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+
+    START(pi_time);
+    pi_vec(G_vec, A_vec, B_vec, G0_vec);
+    END(pi_time);
+    MIN(pi_time_min, pi_time);
+
+    START(syst_simd_time);
+    pmod_vec_mask_t valid =
+        pmod_mat_syst_ct_vec(G_vec, MEDS_k, MEDS_m * MEDS_n);
+    END(syst_simd_time);
+    MIN(syst_time_min, syst_simd_time);
+
+    for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
+      pmod_mat_set_entry_vec(Gs + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
+                             G_vec[i]);
+    }
+
+    int invalids = 0;
+    int tries = 0;
+
+    for (int t = 0; t < 16; t++) {
+      if (t + num_tried >= MEDS_t + num_invalid) break;
+
+      int i = indexes[t + num_tried];
+      if (extract_mask(valid, t) == 0) {
+        int idx = MEDS_t + num_invalid + invalids;
+
+        indexes[idx] = i;
+        Gs[idx] = Gs_data[i];
+        A_tilde[idx] = A_tilde_data[i];
+        B_tilde[idx] = B_tilde_data[i];
+
+        invalids++;
+      }
+
+      tries++;
+    }
+
+    num_valid += tries - invalids;
+    num_invalid += invalids;
+    num_tried += tries;
   }
 
-  START(pi_time);
-  pi_vec(Gs, A_tilde, B_tilde, G_0);
-  END(pi_time);
+  // for (int i = 0; i < MEDS_t; i++) {
+  //   printf("G_tilde[%d]\n", i);
+  //   print_matrix("", Gs_data[i], MEDS_m, MEDS_m);
+  // }
 
-  START(syst_simd_time);
-  pmod_mat_syst_ct_vec(Gs, MEDS_k, MEDS_m * MEDS_n);
-  END(syst_simd_time);
+  /*
+     Serialize results
+     */
 
   for (int i = 0; i < MEDS_t; i++) {
     LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
@@ -462,7 +560,8 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
     for (int r = 0; r < MEDS_k; r++)
       for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-        bs_write(&bs, Gs[i][r * MEDS_m * MEDS_n + j], GFq_bits);
+        // bs_write(&bs, Gs[i][r * MEDS_m * MEDS_n + j], GFq_bits);
+        bs_write(&bs, Gs_data[i][r * MEDS_m * MEDS_n + j], GFq_bits);
 
     shake256_absorb(
         &h_shake, bs_buf,
@@ -474,23 +573,12 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   LOG_M("    %f   (%llu cycles)\n", gen_rsp_time / freq, gen_rsp_time);
 
   LOG_M("    calculate pi (simd):\n");
-  LOG_M("      %f   (%llu cycles)\n", pi_time / freq, pi_time);
+  LOG_M("      %f   (%llu cycles)\n", pi_time_min / freq, pi_time_min);
 
   LOG_M("    calculate syst form (simd):\n");
-  LOG_M("      %f   (%llu cycles)\n", syst_simd_time / freq, syst_simd_time);
+  LOG_M("      %f   (%llu cycles)\n", syst_time_min / freq, syst_time_min);
 
-  LOG_M("\n");
-
-  // LOG_M("  SIMD result 0:\n");
-  // // for (int i = 0; i < MEDS_k; i++) {
-  // for (int i = 0; i < 5; i++) {
-  //   LOG_M("    ");
-  //   // for (int j = 0; j < MEDS_m * MEDS_n; j++) {
-  //   for (int j = 0; j < 12; j++) {
-  //     LOG_M("%d ", Gs[0][i * MEDS_n * MEDS_m + j]);
-  //   }
-  //   LOG_M("\n");
-  // }
+  // LOG_M("\n");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
 
@@ -536,7 +624,9 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
       {
         pmod_mat_t mu[MEDS_m * MEDS_m];
 
-        pmod_mat_mul(mu, MEDS_m, MEDS_m, A_tilde[i], MEDS_m, MEDS_m,
+        // pmod_mat_mul(mu, MEDS_m, MEDS_m, A_tilde[i], MEDS_m, MEDS_m,
+        //              A_inv[h[i]], MEDS_m, MEDS_m);
+        pmod_mat_mul(mu, MEDS_m, MEDS_m, A_tilde_data[i], MEDS_m, MEDS_m,
                      A_inv[h[i]], MEDS_m, MEDS_m);
 
         LOG_MAT(mu, MEDS_m, MEDS_m);
@@ -550,8 +640,10 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
       {
         pmod_mat_t nu[MEDS_n * MEDS_n];
 
+        // pmod_mat_mul(nu, MEDS_n, MEDS_n, B_inv[h[i]], MEDS_n, MEDS_n,
+        //              B_tilde[i], MEDS_n, MEDS_n);
         pmod_mat_mul(nu, MEDS_n, MEDS_n, B_inv[h[i]], MEDS_n, MEDS_n,
-                     B_tilde[i], MEDS_n, MEDS_n);
+                     B_tilde_data[i], MEDS_n, MEDS_n);
 
         LOG_MAT(nu, MEDS_n, MEDS_n);
 
@@ -708,11 +800,12 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
   keccak_state h_shake;
   shake256_init(&h_shake);
 
+  // print_matrix("G_0\n", G_0, MEDS_m, MEDS_n);
+  // print_matrix("G_0\n", G_0, 2, MEDS_n);
+
   long long gen_rsp_time_min = (1ll << 62);
   long long pi_time_min = (1ll << 62);
   long long syst_time_min = (1ll << 62);
-
-  pmod_mat_t G_tilde_t0[MEDS_k * MEDS_m * MEDS_m] = {};
 
   for (int i = 0; i < MEDS_t; i++) {
     long gen_rsp_time = 0;
@@ -749,13 +842,11 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
 
       START(syst_time);
 
-      if (pmod_mat_syst_ct_comp(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, i == 0) !=
-          0)
-        continue;
-
-      if (i == 0)
-        memcpy(G_tilde_t0, G_tilde_ti,
-               sizeof(pmod_mat_t) * MEDS_k * MEDS_m * MEDS_n);
+      if (pmod_mat_syst_ct(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n) != 0) continue;
+      // if (16 <= i && i < 20) {
+      //   printf("%d\n", i);
+      //   print_matrix("G_tilde_0\n", G_tilde_ti, 2, MEDS_n);
+      // }
 
       END(syst_time);
       MIN(syst_time_min, syst_time);
@@ -786,16 +877,25 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
     END(gen_rsp_time);
     MIN(gen_rsp_time_min, gen_rsp_time);
 
+    // printf("G_tilde[%d]\n", i);
+    // print_matrix("", G_tilde_ti, MEDS_m, MEDS_n);
+
     // break;
   }
 
+  // for (int i = 0; i < MEDS_t; i++) {
+  //   printf("G_tilde[%d]\n", i);
+  //   print_matrix("", Gs_data[i], MEDS_m, MEDS_m);
+  //   // print_matrix("", Gs_data[i], MEDS_k, MEDS_m * MEDS_n);
+  // }
+
   END(gen_all_rsp_time);
-  LOG_M("  generate response (%d loops):\n", MEDS_k);
+  LOG_M("  generate response (%d loops):\n", MEDS_t);
   LOG_M("    %f   (%llu cycles)\n", gen_all_rsp_time / freq, gen_all_rsp_time);
 
-  LOG_M("    loop time:\n");
-  LOG_M("      %f   (%llu cycles)\n", gen_rsp_time_min / freq,
-        gen_rsp_time_min);
+  // LOG_M("    loop time:\n");
+  // LOG_M("      %f   (%llu cycles)\n", gen_rsp_time_min / freq,
+  //       gen_rsp_time_min);
 
   LOG_M("    calculate pi:\n");
   LOG_M("      %f   (%llu cycles)\n", pi_time_min / freq, pi_time_min);

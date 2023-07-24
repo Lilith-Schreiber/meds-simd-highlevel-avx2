@@ -50,8 +50,15 @@ int main(int argc, char *argv[]) {
 
     time = -cpucycles();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+    time += cpucycles();
+    printf("Normal time: %llu\n", time);
+
+    time = -cpucycles();
     crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += cpucycles();
+    printf("  SIMD time: %llu\n", time);
+
+    return 0;
 
     if (time < sign_time)
       sign_time = time;

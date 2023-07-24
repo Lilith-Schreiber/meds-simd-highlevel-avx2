@@ -405,37 +405,18 @@ void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G) {
   }
 }
 
-void pi_vec(pmod_mat_t *Gos[], pmod_mat_t *As[], pmod_mat_t *Bs[],
-            pmod_mat_t *Gs) {
-  pmod_vec_t G[MEDS_k][MEDS_m * MEDS_n];
-  pmod_vec_t A[MEDS_m * MEDS_m];
-  pmod_vec_t B[MEDS_n * MEDS_n];
-  pmod_vec_t Go[MEDS_k][MEDS_m * MEDS_n];
+void pi_vec(pmod_vec_t *Go, pmod_vec_t *A, pmod_vec_t *B, pmod_vec_t *G0) {
 
-  for (int i = 0; i < MEDS_k; i++)
-    for (int j = 0; j < MEDS_m * MEDS_n; j++)
-      G[i][j] = SET1(Gs[i * MEDS_m * MEDS_n + j]);
+  pmod_vec_t *Go_sub[MEDS_k];
+  pmod_vec_t *G0_sub[MEDS_k];
 
-  for (int i = 0; i < MEDS_m * MEDS_m; i++)
-    A[i] = pmod_mat_entry_vec(As, 1, MEDS_m * MEDS_m, 0, i);
-
-  for (int i = 0; i < MEDS_n * MEDS_n; i++)
-    B[i] = pmod_mat_entry_vec(Bs, 1, MEDS_n * MEDS_n, 0, i);
-
-  long long t = -cpucycles();
-
+  for (int i = 0; i < MEDS_k; i++) Go_sub[i] = &Go[i * MEDS_m * MEDS_n];
+  for (int i = 0; i < MEDS_k; i++) G0_sub[i] = &G0[i * MEDS_m * MEDS_n];
 
   for (int i = 0; i < MEDS_k; i++) {
-    pmod_mat_mul_vec(Go[i], MEDS_m, MEDS_n, A, MEDS_m, MEDS_m, G[i], MEDS_m,
+    pmod_mat_mul_vec(Go_sub[i], MEDS_m, MEDS_n, A, MEDS_m, MEDS_m, G0_sub[i], MEDS_m,
                      MEDS_n);
-    pmod_mat_mul_vec(Go[i], MEDS_m, MEDS_n, Go[i], MEDS_m, MEDS_n, B, MEDS_n,
+    pmod_mat_mul_vec(Go_sub[i], MEDS_m, MEDS_n, Go_sub[i], MEDS_m, MEDS_n, B, MEDS_n,
                      MEDS_n);
   }
-
-  t += cpucycles();
-  printf("Real pi time: %lld\n", t);
-
-  for (int i = 0; i < MEDS_k; i++)
-    for (int j = 0; j < MEDS_m * MEDS_n; j++)
-      pmod_mat_set_entry_vec(Gos, MEDS_k, MEDS_m * MEDS_n, i, j, Go[i][j]);
 }

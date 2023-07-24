@@ -1,6 +1,8 @@
 SHELL := /bin/bash
 
-PARAM = toy
+PARAM = MEDS167717
+# PARAM = MEDS134180
+# PARAM = toy
 
 LIBS = -lssl -lcrypto
 CC := gcc
@@ -55,14 +57,21 @@ $(BUILDOBJ) : $(OBJDIR)/%.o: %.c $(HEADERS) | $(OBJDIR)
 $(TARGETS) : $(OBJDIR)/%: %.c $(BUILDOBJ)
 	$(CC) $(@F).c $(BUILDOBJ) $(CFLAGS) $(LIBS) -o $@
 
+BUILD: test
+	@echo ""
 
-RUN: test
+RUN: 
 	@echo ""
 	@$(OBJDIR)/test
 
 RUN_ALL:
 	for p in `./params.py -l`; do \
-	echo "\nRunning par set" $$p; \
+	echo "Running par set" $$p; \
+	make BUILD PARAM=$$p; \
+	echo ""; \
+	done;
+	for p in `./params.py -l`; do \
+	echo "Running par set" $$p; \
 	make RUN PARAM=$$p; \
 	echo ""; \
 	done;
@@ -73,12 +82,29 @@ KAT:
 	$(MAKE) KAT_test PARAM=$(PARAM)
 	build/$(PARAM)/KAT_test
 
-KAT_ALL:
+KAT_BUILD: 
+	$(MAKE) KAT_test PARAM=$(PARAM)
+
+KAT_RUN: 
+	build/$(PARAM)/KAT_test
+
+KAT_BUILD_ALL:
 	@for p in `./params.py -l`; do \
-	echo "Running par set" $$p; \
-	make PARAM=$$p KAT; \
+	echo "Building par set" $$p; \
+	make PARAM=$$p KAT_BUILD; \
 	echo ""; \
 	done
+
+KAT_RUN_ALL:
+	@for p in `./params.py -l`; do \
+	echo "Running par set" $$p; \
+	make PARAM=$$p KAT_RUN; \
+	echo ""; \
+	done
+
+KAT_ALL:
+	make KAT_BUILD_ALL
+	make KAT_RUN_ALL
 
 BENCH:
 	make bench PARAM=$(PARAM)
