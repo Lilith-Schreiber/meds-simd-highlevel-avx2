@@ -39,7 +39,7 @@ uint32_t extract_vec(__m512i x, int pos);
 uint32_t extract_mask(__mmask16 x, int pos);
 
 void print_256_vec(__m256i a, __m256i mask);
-void print_512_vec(__m512i a, __m512i mask);
+void print_512_vec(__m512i a);
 
 __m512i GF_reduc_vec(const __m512i u);
 __m512i GF_mod_vec(const __m512i u);

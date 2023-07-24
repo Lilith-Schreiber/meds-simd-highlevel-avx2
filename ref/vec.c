@@ -36,11 +36,11 @@ void print_256_vec(__m256i a, __m256i mask) {
   printf("\n");
 }
 
-void print_512_vec(__m512i a, __m512i mask) {
+void print_512_vec(__m512i a) {
   uint32_t a_buf[16];
   STORE((int *)a_buf, a);
   for (int i = 0; i < 16; i++) {
-    printf("%d ", a_buf[i]);
+    printf("%6d", a_buf[i]);
   }
   printf("\n");
 }

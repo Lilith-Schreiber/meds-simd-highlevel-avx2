@@ -503,8 +503,10 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     MIN(pi_time_min, pi_time);
 
     START(syst_simd_time);
+    // pmod_vec_mask_t valid =
+    //     pmod_mat_syst_ct_vec(G_vec, MEDS_k, MEDS_m * MEDS_n);
     pmod_vec_mask_t valid =
-        pmod_mat_syst_ct_vec(G_vec, MEDS_k, MEDS_m * MEDS_n);
+        pmod_mat_syst_ct_vec_inv(G_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_simd_time);
     MIN(syst_time_min, syst_simd_time);
 
@@ -538,6 +540,13 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     num_invalid += invalids;
     num_tried += tries;
   }
+
+  // printf("Sqaure\n");
+  // for (int i = 0; i < 10; i++) {
+  //   for (int j = 0; j < 10; j++)
+  //     printf("%6d", Gs_data[0][i * MEDS_m * MEDS_n + j]);
+  //   printf("\n");
+  // }
 
   // for (int i = 0; i < MEDS_t; i++) {
   //   printf("G_tilde[%d]\n", i);

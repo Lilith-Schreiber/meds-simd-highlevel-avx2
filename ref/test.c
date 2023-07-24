@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     time += cpucycles();
     printf("  SIMD time: %llu\n", time);
 
-    return 0;
+    // return 0;
 
     if (time < sign_time)
       sign_time = time;

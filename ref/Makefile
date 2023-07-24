@@ -57,10 +57,10 @@ $(BUILDOBJ) : $(OBJDIR)/%.o: %.c $(HEADERS) | $(OBJDIR)
 $(TARGETS) : $(OBJDIR)/%: %.c $(BUILDOBJ)
 	$(CC) $(@F).c $(BUILDOBJ) $(CFLAGS) $(LIBS) -o $@
 
-BUILD: test
-	@echo ""
+# BUILD: test
+# 	@echo ""
 
-RUN: 
+RUN: test
 	@echo ""
 	@$(OBJDIR)/test
 
@@ -70,11 +70,11 @@ RUN_ALL:
 	make BUILD PARAM=$$p; \
 	echo ""; \
 	done;
-	for p in `./params.py -l`; do \
-	echo "Running par set" $$p; \
-	make RUN PARAM=$$p; \
-	echo ""; \
-	done;
+	# for p in `./params.py -l`; do \
+	# echo "Running par set" $$p; \
+	# make RUN PARAM=$$p; \
+	# echo ""; \
+	# done;
 
 .PHONY: debug KAT
 
