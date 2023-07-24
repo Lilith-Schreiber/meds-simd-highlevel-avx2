@@ -9,14 +9,16 @@
 #include "api.h"
 #include "meds.h"
 
-#include <x86intrin.h>
+#include "measure.h"
 
-double osfreq(void);
+// #include <x86intrin.h>
 
-long long cpucycles(void)
-{
-  return __rdtsc();
-}
+// double osfreq(void);
+
+// long long cpucycles(void)
+// {
+//   return __rdtsc();
+// }
 
 int main(int argc, char *argv[])
 {

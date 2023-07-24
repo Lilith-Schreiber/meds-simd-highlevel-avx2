@@ -1,0 +1,206 @@
+make[1]: Entering directory '/home/tom1484/Workspace/c/meds_bench'
+python params.py -a toy > build/toy/api.h
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c meds.c -o build/toy/meds.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c util.c -o build/toy/util.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c seed.c -o build/toy/seed.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c fips202.c -o build/toy/fips202.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c matrixmod.c -o build/toy/matrixmod.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c bitstream.c -o build/toy/bitstream.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c randombytes.c -o build/toy/randombytes.o
+gcc -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -c measure.c -o build/toy/measure.o
+gcc test.c build/toy/meds.o build/toy/util.o build/toy/seed.o build/toy/fips202.o build/toy/matrixmod.o build/toy/bitstream.o build/toy/randombytes.o build/toy/measure.o -g -Wall -Dtoy -march=native -Ibuild/toy -INIST -lssl -lcrypto -o build/toy/test
+make[1]: Leaving directory '/home/tom1484/Workspace/c/meds_bench'
+
+paramter set: toy
+
+pk:  3593 bytes
+sk:  1042 bytes
+sig: 2132 bytes
+
+      1794      2716      8020      3177      4797
+
+      7868      4968      6345      7222      4976
+
+      7371      5605      3485      4026      5216
+
+      4340      1771      4733      3687      2204
+
+      3416      7816      7480      5920       281
+
+      5212      3892      6398      3480      7478
+
+       954       836      3151       441      3882
+
+      6891      5986      3806      2273      4486
+
+      4738      3948      3423      5676       653
+
+      2125      8089      6248      2952      6890
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+      1794      2716      8020      3177      4797
+      7868      4968      6345      7222      4976
+      7371      5605      3485      4026      5216
+      4340      1771      4733      3687      2204
+      3416      7816      7480      5920       281
+      5212      3892      6398      3480      7478
+       954       836      3151       441      3882
+      6891      5986      3806      2273      4486
+      4738      3948      3423      5676       653
+      2125      8089      6248      2952      6890
+
+!!! FAILED !!!
+
+Time (min of 1 runs):
+keygen: 0.000503   (2113331 cycles)
+sign:   0.001423   (5977239 cycles)
+verify: 0.001738   (7298105 cycles)

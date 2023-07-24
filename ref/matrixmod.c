@@ -1,94 +1,242 @@
+#include "matrixmod.h"
+
+#include <immintrin.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "params.h"
-#include"matrixmod.h"
+#include "vec.h"
 
-void pmod_mat_print(pmod_mat_t *M, int M_r, int M_c)
-{
+void pmod_mat_print(pmod_mat_t *M, int M_r, int M_c) {
   pmod_mat_fprint(stdout, M, M_r, M_c);
 }
 
-void pmod_mat_fprint(FILE *stream, pmod_mat_t *M, int M_r, int M_c)
-{
-  for (int r = 0; r < M_r; r++)
-  {
+void pmod_mat_fprint(FILE *stream, pmod_mat_t *M, int M_r, int M_c) {
+  for (int r = 0; r < M_r; r++) {
     fprintf(stream, "[");
-    for (int c = 0; c < M_c-1; c++)
+    for (int c = 0; c < M_c - 1; c++)
       fprintf(stream, "%4i ", pmod_mat_entry(M, M_r, M_c, r, c));
-    fprintf(stream, "%4i", pmod_mat_entry(M, M_r, M_c, r, M_c-1));
+    fprintf(stream, "%4i", pmod_mat_entry(M, M_r, M_c, r, M_c - 1));
     fprintf(stream, "]\n");
   }
 }
 
-void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r, int A_c, pmod_mat_t *B, int B_r, int B_c)
-{
-  GFq_t tmp[C_r*C_c];
+void pmod_mat_mul(pmod_mat_t *C, int C_r, int C_c, pmod_mat_t *A, int A_r,
+                  int A_c, pmod_mat_t *B, int B_r, int B_c) {
+  GFq_t tmp[C_r * C_c];
 
   for (int c = 0; c < C_c; c++)
-    for (int r = 0; r < C_r; r++)
-    {
+    for (int r = 0; r < C_r; r++) {
       uint64_t val = 0;
 
-      for (int i = 0; i < A_r; i++)
-        val = (val + (uint64_t)pmod_mat_entry(A, A_r, A_c, r, i) * (uint64_t)pmod_mat_entry(B, B_r, B_c, i, c));
+      for (int i = 0; i < A_r; i++) {
+        val = (val + (uint64_t)pmod_mat_entry(A, A_r, A_c, r, i) *
+                         (uint64_t)pmod_mat_entry(B, B_r, B_c, i, c));
+      }
 
-      tmp[r*C_c + c] = val % MEDS_p;
+      tmp[r * C_c + c] = val % MEDS_p;
     }
 
   for (int c = 0; c < C_c; c++)
     for (int r = 0; r < C_r; r++)
-      pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r*C_c + c]);
+      pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
 }
 
-int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c)
-{
-  if (pmod_mat_row_echelon_ct(M, M_r, M_c) < 0)
-    return -1;
+void pmod_mat_mul_vec(pmod_vec_t *C, int C_r, int C_c, pmod_vec_t *A, int A_r,
+                      int A_c, pmod_vec_t *B, int B_r, int B_c) {
+  pmod_vec_t tmp[C_r * C_c];
+  const pmod_vec_t zero = SET1(0);
+
+  for (int c = 0; c < C_c; c++)
+    for (int r = 0; r < C_r; r++) {
+      pmod_vec_t val = zero;
+
+      for (int i = 0; i < A_r; i++) {
+        val = ADD(val, MULLO(pmod_mat_entry(A, A_r, A_c, r, i),
+                             pmod_mat_entry(B, B_r, B_c, i, c)));
+      }
+      // tmp[r * C_c + c] = GF_mod_vec(val);
+      C[r * C_c + c] = GF_mod_vec(val);
+    }
+
+  // for (int c = 0; c < C_c; c++)
+  //   for (int r = 0; r < C_r; r++)
+  //     pmod_mat_set_entry(C, C_r, C_c, r, c, tmp[r * C_c + c]);
+}
+
+int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c) {
+  if (pmod_mat_row_echelon_ct(M, M_r, M_c) < 0) return -1;
 
   return pmod_mat_back_substitution_ct(M, M_r, M_c);
 }
 
-int pmod_mat_row_echelon_ct(pmod_mat_t *M, int M_r, int M_c)
-{
-  for (int r = 0; r < M_r; r++)
-  {
+int pmod_mat_syst_ct_comp(pmod_mat_t *M, int M_r, int M_c, int show) {
+  if (pmod_mat_row_echelon_ct_comp(M, M_r, M_c, show) < 0) return -1;
+
+  return pmod_mat_back_substitution_ct(M, M_r, M_c);
+}
+
+void pmod_mat_back_substitution_ct_vec(pmod_vec_t *M, int M_r, int M_c) {
+  const pmod_vec_t zero = SET1(0);
+  const pmod_vec_t p = SET1(MEDS_p);
+
+  for (int r = M_r - 1; r >= 0; r--)
+    for (int r2 = 0; r2 < r; r2++) {
+      pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+
+      pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
+      pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
+
+      pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+
+      val = SUB(tmp1, val);
+      val = ADD_M(val, p, LT(val, zero));
+
+      pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
+
+      for (int c = M_r; c < M_c; c++) {
+        pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+
+        pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+
+        val = SUB(tmp1, val);
+        val = ADD_M(val, p, LT(val, zero));
+
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+      }
+    }
+}
+
+void pmod_mat_syst_ct_vec(pmod_mat_t *Ms[], int M_r, int M_c) {
+  // __m256i full_mask = _mm256_set1_epi16(0xFFFF);
+  const pmod_vec_t zero = SET1(0);
+  const pmod_vec_t p = SET1(MEDS_p);
+
+  __mmask16 valid = 0xFFFF;
+
+  pmod_vec_t M[M_r * M_c];
+  for (int r = 0; r < M_r; r++) {
+    for (int c = 0; c < M_c; c++) {
+      M[r * M_c + c] = pmod_mat_entry_vec(Ms, M_r, M_c, r, c);
+    }
+  }
+
+  for (int r = 0; r < M_r; r++) {
+    // continue;
     // swap
-    for (int r2 = r+1; r2 < M_r; r2++)
-    {
+    for (int r2 = r + 1; r2 < M_r; r2++) {
+      pmod_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
+      __mmask16 Mrr_eq_zero = EQ(Mrr, zero);
+
+      for (int c = r; c < M_c; c++) {
+        pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
+        pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+
+        pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
+        res = SUB_M(res, p, GE(res, p));
+        pmod_mat_set_entry(M, M_r, M_c, r, c, res);
+      }
+    }
+
+    // for (int i = 0; i < 5; i++) {
+    //   printf("%10d", extract(pmod_mat_entry(M, M_r, M_c, r, i)));
+    // }
+    // printf("\n");
+
+    pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r, r);
+    __mmask16 val_eq_zero = EQ(val, zero);
+    valid = valid & val_eq_zero;
+
+    val = GF_inv_vec(val);
+    // printf("val (simd): %d\n", extract(val));
+    for (int c = r; c < M_c; c++) {
+      pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+      // pmod_vec_t res = modulo(MULLO(Mrc, val));
+      pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
+      // if (c == r)
+      //   printf("res: %d\n", extract(res));
+      pmod_mat_set_entry(M, M_r, M_c, r, c, res);
+    }
+
+    for (int r2 = r + 1; r2 < M_r; r2++) {
+      pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+
+      for (int c = r; c < M_c; c++) {
+        pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+
+        // pmod_vec_t val = modulo(MULLO(tmp0, factor));
+        pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+        val = SUB(tmp1, val);
+
+        val = ADD_M(val, p, LT(val, zero));
+
+        // if (c == r && r2 == r + 1)
+        //   printf("simd val: %d\n", extract(val));
+
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+      }
+    }
+  }
+
+  pmod_mat_back_substitution_ct_vec(M, M_r, M_c);
+
+  for (int r = 0; r < M_r; r++) {
+    for (int c = 0; c < M_c; c++) {
+      // M[r * M_c + c] = pmod_mat_entry_simd(M_sisd, M_r, M_c, r, c);
+      pmod_mat_set_entry_vec(Ms, M_r, M_c, r, c, M[r * M_c + c]);
+    }
+  }
+}
+
+int pmod_mat_row_echelon_ct_comp(pmod_mat_t *M, int M_r, int M_c, int show) {
+  for (int r = 0; r < M_r; r++) {
+    // continue;
+    // swap
+    for (int r2 = r + 1; r2 < M_r; r2++) {
       uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
 
-      for (int c = r; c < M_c; c++)
-      {
+      for (int c = r; c < M_c; c++) {
         uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
 
         uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
 
-        pmod_mat_set_entry(M, M_r, M_c, r, c, (Mrc + val * (Mrr == 0)) % MEDS_p);
+        pmod_mat_set_entry(M, M_r, M_c, r, c,
+                           (Mrc + val * (Mrr == 0)) % MEDS_p);
       }
     }
+    // if (show) {
+    //   for (int i = 0; i < 5; i++) {
+    //     printf("%10d", pmod_mat_entry(M, M_r, M_c, r, i));
+    //   }
+    //   printf("\n");
+    // }
 
     uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
 
-    if (val == 0)
-      return -1;
+    if (val == 0) return -1;
 
     val = GF_inv(val);
+    // if (show) {
+    //   printf("val: %d\n", val);
+    // }
 
     // normalize
-    for (int c = r; c < M_c; c++)
-    {
-      uint64_t tmp = ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
+    for (int c = r; c < M_c; c++) {
+      uint64_t tmp =
+          ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
+      // if (show && c == r)
+      //   printf("tmp: %d\n", tmp);
       pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
     }
 
     // eliminate
-    for (int r2 = r+1; r2 < M_r; r2++)
-    {
+    for (int r2 = r + 1; r2 < M_r; r2++) {
       uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
 
-      for (int c = r; c < M_c; c++)
-      {
+      for (int c = r; c < M_c; c++) {
         uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
@@ -98,7 +246,10 @@ int pmod_mat_row_echelon_ct(pmod_mat_t *M, int M_r, int M_c)
 
         val += MEDS_p * (val < 0);
 
-        pmod_mat_set_entry(M, M_r, M_c,  r2, c, val);
+        // if (c == r && r2 == r + 1 && show)
+        //   printf("comp val: %d\n", val);
+
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
     }
   }
@@ -106,12 +257,61 @@ int pmod_mat_row_echelon_ct(pmod_mat_t *M, int M_r, int M_c)
   return 0;
 }
 
-int pmod_mat_back_substitution_ct(pmod_mat_t *M, int M_r, int M_c)
-{
+int pmod_mat_row_echelon_ct(pmod_mat_t *M, int M_r, int M_c) {
+  for (int r = 0; r < M_r; r++) {
+    // swap
+    for (int r2 = r + 1; r2 < M_r; r2++) {
+      uint64_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
+
+      for (int c = r; c < M_c; c++) {
+        uint64_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
+
+        uint64_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+
+        pmod_mat_set_entry(M, M_r, M_c, r, c,
+                           (Mrc + val * (Mrr == 0)) % MEDS_p);
+      }
+    }
+
+    uint64_t val = pmod_mat_entry(M, M_r, M_c, r, r);
+
+    if (val == 0) return -1;
+
+    val = GF_inv(val);
+
+    // normalize
+    for (int c = r; c < M_c; c++) {
+      uint64_t tmp =
+          ((uint64_t)pmod_mat_entry(M, M_r, M_c, r, c) * val) % MEDS_p;
+      pmod_mat_set_entry(M, M_r, M_c, r, c, tmp);
+    }
+
+    // eliminate
+    for (int r2 = r + 1; r2 < M_r; r2++) {
+      uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+
+      for (int c = r; c < M_c; c++) {
+        uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+        uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+
+        int64_t val = (tmp0 * factor) % MEDS_p;
+
+        val = tmp1 - val;
+
+        val += MEDS_p * (val < 0);
+
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+      }
+    }
+  }
+
+  return 0;
+}
+
+int pmod_mat_back_substitution_ct(pmod_mat_t *M, int M_r, int M_c) {
   // back substitution
   for (int r = M_r - 1; r >= 0; r--)
-    for (int r2 = 0; r2 < r; r2++)
-    {
+    for (int r2 = 0; r2 < r; r2++) {
       uint64_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
 
       uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
@@ -123,10 +323,9 @@ int pmod_mat_back_substitution_ct(pmod_mat_t *M, int M_r, int M_c)
 
       val += MEDS_p * (val < 0);
 
-      pmod_mat_set_entry(M, M_r, M_c,  r2, r, val);
+      pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
 
-      for (int c = M_r; c < M_c; c++)
-      {
+      for (int c = M_r; c < M_c; c++) {
         uint64_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
         uint64_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
 
@@ -136,28 +335,27 @@ int pmod_mat_back_substitution_ct(pmod_mat_t *M, int M_r, int M_c)
 
         val += MEDS_p * (val < 0);
 
-        pmod_mat_set_entry(M, M_r, M_c,  r2, c, val);
+        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
       }
     }
 
   return 0;
 }
 
-GFq_t GF_inv(GFq_t val)
-{
-  if (MEDS_p == 8191)
-  {
+GFq_t GF_inv(GFq_t val) {
+  // if (MEDS_p == 8191) {
+  if (0) {
     // Use optimal addition chain...
-    uint64_t tmp_0  = val;
-    uint64_t tmp_1  = (tmp_0 * tmp_0) % MEDS_p;
-    uint64_t tmp_2  = (tmp_1 * tmp_0) % MEDS_p;
-    uint64_t tmp_3  = (tmp_2 * tmp_1) % MEDS_p;
-    uint64_t tmp_4  = (tmp_3 * tmp_3) % MEDS_p;
-    uint64_t tmp_5  = (tmp_4 * tmp_3) % MEDS_p;
-    uint64_t tmp_6  = (tmp_5 * tmp_5) % MEDS_p;
-    uint64_t tmp_7  = (tmp_6 * tmp_6) % MEDS_p;
-    uint64_t tmp_8  = (tmp_7 * tmp_7) % MEDS_p;
-    uint64_t tmp_9  = (tmp_8 * tmp_8) % MEDS_p;
+    uint64_t tmp_0 = val;
+    uint64_t tmp_1 = (tmp_0 * tmp_0) % MEDS_p;
+    uint64_t tmp_2 = (tmp_1 * tmp_0) % MEDS_p;
+    uint64_t tmp_3 = (tmp_2 * tmp_1) % MEDS_p;
+    uint64_t tmp_4 = (tmp_3 * tmp_3) % MEDS_p;
+    uint64_t tmp_5 = (tmp_4 * tmp_3) % MEDS_p;
+    uint64_t tmp_6 = (tmp_5 * tmp_5) % MEDS_p;
+    uint64_t tmp_7 = (tmp_6 * tmp_6) % MEDS_p;
+    uint64_t tmp_8 = (tmp_7 * tmp_7) % MEDS_p;
+    uint64_t tmp_9 = (tmp_8 * tmp_8) % MEDS_p;
     uint64_t tmp_10 = (tmp_9 * tmp_5) % MEDS_p;
     uint64_t tmp_11 = (tmp_10 * tmp_10) % MEDS_p;
     uint64_t tmp_12 = (tmp_11 * tmp_11) % MEDS_p;
@@ -168,18 +366,14 @@ GFq_t GF_inv(GFq_t val)
     uint64_t tmp_17 = (tmp_16 * tmp_3) % MEDS_p;
 
     return tmp_17;
-  }
-  else
-  {
+  } else {
     uint64_t exponent = MEDS_p - 2;
     uint64_t t = 1;
 
-    while (exponent > 0)
-    {
-      if ((exponent & 1) != 0)
-        t = (t*(uint64_t)val) % MEDS_p;
+    while (exponent > 0) {
+      if ((exponent & 1) != 0) t = (t * (uint64_t)val) % MEDS_p;
 
-      val = ((uint64_t)val*(uint64_t)val) % MEDS_p;
+      val = ((uint64_t)val * (uint64_t)val) % MEDS_p;
 
       exponent >>= 1;
     }
@@ -188,24 +382,21 @@ GFq_t GF_inv(GFq_t val)
   }
 }
 
-int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c)
-{
-  pmod_mat_t M[A_r * A_c*2];
+int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c) {
+  pmod_mat_t M[A_r * A_c * 2];
 
-  for (int r = 0; r < A_r; r++)
-  {
-    memcpy(&M[r * A_c*2], &A[r * A_c], A_c * sizeof(GFq_t));
+  for (int r = 0; r < A_r; r++) {
+    memcpy(&M[r * A_c * 2], &A[r * A_c], A_c * sizeof(GFq_t));
 
     for (int c = 0; c < A_c; c++)
-      pmod_mat_set_entry(M, A_r, A_c*2, r, A_c + c, r==c ? 1 : 0);
+      pmod_mat_set_entry(M, A_r, A_c * 2, r, A_c + c, r == c ? 1 : 0);
   }
 
-  int ret = pmod_mat_syst_ct(M, A_r, A_c*2);
+  int ret = pmod_mat_syst_ct(M, A_r, A_c * 2);
 
   if ((ret == 0) && B)
     for (int r = 0; r < A_r; r++)
-      memcpy(&B[r * A_c], &M[r * A_c*2 + A_c], A_c * sizeof(GFq_t));
+      memcpy(&B[r * A_c], &M[r * A_c * 2 + A_c], A_c * sizeof(GFq_t));
 
   return ret;
 }
-

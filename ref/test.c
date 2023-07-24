@@ -1,25 +1,16 @@
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "randombytes.h"
 
-#include "params.h"
 #include "api.h"
 #include "meds.h"
+#include "params.h"
 
-double osfreq(void);
+#include "measure.h"
 
-long long cpucycles(void)
-{
-  unsigned long long result;
-  asm volatile(".byte 15;.byte 49;shlq $32,%%rdx;orq %%rdx,%%rax"
-      : "=a" (result) ::  "%rdx");
-  return result;
-}
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
   printf("paramter set: %s\n\n", MEDS_name);
 
   long long time = 0;
@@ -43,8 +34,7 @@ int main(int argc, char *argv[])
   printf("sig: %i bytes\n", CRYPTO_BYTES);
   printf("\n");
 
-  for (int round = 0; round < rounds; round++)
-  {
+  for (int round = 0; round < rounds; round++) {
     uint8_t sk[CRYPTO_SECRETKEYBYTES] = {0};
     uint8_t pk[CRYPTO_PUBLICKEYBYTES] = {0};
 
@@ -52,26 +42,29 @@ int main(int argc, char *argv[])
     crypto_sign_keypair(pk, sk);
     time += cpucycles();
 
-    if (time < keygen_time) keygen_time = time;
+    if (time < keygen_time)
+      keygen_time = time;
 
     uint8_t sig[CRYPTO_BYTES + sizeof(msg)] = {0};
     unsigned long long sig_len = sizeof(sig);
 
     time = -cpucycles();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+    crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += cpucycles();
 
-    if (time < sign_time) sign_time = time;
+    if (time < sign_time)
+      sign_time = time;
 
     unsigned char msg_out[4];
     unsigned long long msg_out_len = sizeof(msg_out);
-
 
     time = -cpucycles();
     int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
     time += cpucycles();
 
-    if (time < verify_time) verify_time = time;
+    if (time < verify_time)
+      verify_time = time;
 
     if (ret == 0)
       printf("success\n");
@@ -89,4 +82,3 @@ int main(int argc, char *argv[])
 
   return 0;
 }
-

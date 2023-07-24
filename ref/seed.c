@@ -7,47 +7,43 @@
 #include "params.h"
 #endif
 
-#include "seed.h"
 #include "log.h"
+#include "seed.h"
 
-void print_tree(uint8_t *stree)
-{
+void print_tree(uint8_t *stree) {
   int h = 0;
   int i = 0;
 
   int start = i;
-  int end = i+1;
+  int end = i + 1;
 
-  for (; h < MEDS_seed_tree_height + 1; h++)
-  {
-    for (int i = 0; i < (1 << (MEDS_seed_tree_height - h))-1; i++)
+  for (; h < MEDS_seed_tree_height + 1; h++) {
+    for (int i = 0; i < (1 << (MEDS_seed_tree_height - h)) - 1; i++)
       printf("  ");
 
-    for (int i = start; i < end; i++)
-    {
+    for (int i = start; i < end; i++) {
       // print incomplete tree for non-power-of-two number of leafs
       if ((i << (MEDS_seed_tree_height - h)) >= MEDS_t)
         break;
 
       printf("%02x", stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)]);
 
-      for (int j = 0; j < ((1 << (MEDS_seed_tree_height - h)) - 1)*2 + 1; j++)
+      for (int j = 0; j < ((1 << (MEDS_seed_tree_height - h)) - 1) * 2 + 1; j++)
         printf("  ");
     }
 
     printf("\n");
 
-    start = start<<1;
-    end = end<<1;
+    start = start << 1;
+    end = end << 1;
   }
 }
 
-void t_hash(uint8_t *stree, uint8_t *salt, int h, int i)
-{
+void t_hash(uint8_t *stree, uint8_t *salt, int h, int i) {
   keccak_state shake;
 
   int start = i;
-  int end = i+1;
+  int end = i + 1;
 
   uint8_t buf[MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t)] = {0};
 
@@ -55,42 +51,43 @@ void t_hash(uint8_t *stree, uint8_t *salt, int h, int i)
 
   uint8_t *pos = buf + MEDS_st_salt_bytes + MEDS_st_seed_bytes;
 
-  for (h = h+1; h < MEDS_seed_tree_height+1; h++)
-  {
-    start = start<<1;
-    end = end<<1;
+  for (h = h + 1; h < MEDS_seed_tree_height + 1; h++) {
+    start = start << 1;
+    end = end << 1;
 
     if ((start << (MEDS_seed_tree_height - h)) >= MEDS_t)
       break;
 
-    for (int i = start; i < end; i+=2)
-    {
+    for (int i = start; i < end; i += 2) {
       if ((i << (MEDS_seed_tree_height - h)) >= MEDS_t)
         break;
 
       for (int j = 0; j < 4; j++)
-        pos[j] = (SEED_TREE_ADDR(h-1, i>>1) >> (j*8)) & 0xff;
+        pos[j] = (SEED_TREE_ADDR(h - 1, i >> 1) >> (j * 8)) & 0xff;
 
       memcpy(buf + MEDS_st_salt_bytes,
-          &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h-1, i>>1)],
-          MEDS_st_seed_bytes);
+             &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h - 1, i >> 1)],
+             MEDS_st_seed_bytes);
 
       shake256_init(&shake);
-      shake256_absorb(&shake, buf, MEDS_st_salt_bytes + MEDS_st_seed_bytes + sizeof(uint32_t));
+      shake256_absorb(&shake, buf,
+                      MEDS_st_salt_bytes + MEDS_st_seed_bytes +
+                          sizeof(uint32_t));
       shake256_finalize(&shake);
 
-      int len = 2*MEDS_st_seed_bytes;
+      int len = 2 * MEDS_st_seed_bytes;
 
-      if (((i+1) << (MEDS_seed_tree_height - h)) >= MEDS_t)
+      if (((i + 1) << (MEDS_seed_tree_height - h)) >= MEDS_t)
         len = MEDS_st_seed_bytes;
 
-      shake256_squeeze(&stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)], len, &shake);
+      shake256_squeeze(&stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)], len,
+                       &shake);
     }
   }
 }
 
-void stree_to_path_to_stree(uint8_t *stree, uint8_t *h_digest, uint8_t *path, uint8_t *salt, int mode)
-{
+void stree_to_path_to_stree(uint8_t *stree, uint8_t *h_digest, uint8_t *path,
+                            uint8_t *salt, int mode) {
   int h = 0;
   int i = 0;
 
@@ -104,22 +101,18 @@ void stree_to_path_to_stree(uint8_t *stree, uint8_t *h_digest, uint8_t *path, ui
     if (h_digest[i] > 0)
       indices[idx++] = i;
 
-
-  while (1 == 1)
-  {
+  while (1 == 1) {
     int index_leaf = 0;
 
-    while ((indices[id] >> (MEDS_seed_tree_height - h)) == i)
-    {
+    while ((indices[id] >> (MEDS_seed_tree_height - h)) == i) {
       h += 1;
       i <<= 1;
 
-      if (h > MEDS_seed_tree_height)
-      {
+      if (h > MEDS_seed_tree_height) {
         h -= 1;
         i >>= 1;
 
-        if (id+1 < MEDS_w)
+        if (id + 1 < MEDS_w)
           id++;
 
         index_leaf = 1;
@@ -128,16 +121,14 @@ void stree_to_path_to_stree(uint8_t *stree, uint8_t *h_digest, uint8_t *path, ui
       }
     }
 
-    if (index_leaf == 0)
-    {
-      if (mode == STREE_TO_PATH)
-      {
-        memcpy(path, &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)], MEDS_st_seed_bytes);
+    if (index_leaf == 0) {
+      if (mode == STREE_TO_PATH) {
+        memcpy(path, &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)],
+               MEDS_st_seed_bytes);
         path += MEDS_st_seed_bytes;
-      }
-      else
-      {
-        memcpy(&stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)], path, MEDS_st_seed_bytes);
+      } else {
+        memcpy(&stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(h, i)], path,
+               MEDS_st_seed_bytes);
         path += MEDS_st_seed_bytes;
 
         t_hash(stree, salt, h, i);
@@ -145,17 +136,15 @@ void stree_to_path_to_stree(uint8_t *stree, uint8_t *h_digest, uint8_t *path, ui
     }
 
     // backtrack
-    while ((i & 1) == 1)
-    {
+    while ((i & 1) == 1) {
       h -= 1;
       i >>= 1;
     }
 
     // next leaf
-    i+=1;
+    i += 1;
 
     if ((i << (MEDS_seed_tree_height - h)) >= MEDS_t)
       return;
   }
 }
-

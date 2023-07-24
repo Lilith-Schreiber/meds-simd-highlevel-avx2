@@ -6,10 +6,12 @@ LIBS = -lssl -lcrypto
 CC := gcc
 
 ifdef DEBUG
-CFLAGS := -g -Wall -D$(PARAM) -DDEBUG
+CFLAGS := -g -Wall -D$(PARAM) -DDEBUG -march=native
 OBJDIR := debug/$(PARAM)
 else
-CFLAGS := -O3 -Wall -D$(PARAM)
+# CFLAGS := -g -Wall -D$(PARAM) -mavx512f
+CFLAGS := -O3 -Wall -D$(PARAM) -mavx512f
+# CFLAGS := -O3 -Wall -D$(PARAM)
 OBJDIR := build/$(PARAM)
 endif
 
@@ -27,7 +29,8 @@ TARGETS := ${EXES:%=$(OBJDIR)/%}
 
 default: $(EXES)
 
-OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o
+# OBJECTS = meds.o util.o seed.o osfreq.o fips202.o matrixmod.o bitstream.o randombytes.o
+OBJECTS = meds.o util.o seed.o fips202.o matrixmod.o bitstream.o randombytes.o measure.o vec.o
 HEADERS = $(wildcard *.h) params.h $(OBJDIR)/api.h
 
 BUILDOBJ := ${OBJECTS:%=$(OBJDIR)/%}
