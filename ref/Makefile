@@ -1,6 +1,7 @@
 SHELL := /bin/bash
 
-PARAM = MEDS167717
+# PARAM = MEDS167717
+PARAM = MEDS201254
 # PARAM = MEDS134180
 # PARAM = toy
 
@@ -8,12 +9,10 @@ LIBS = -lssl -lcrypto
 CC := gcc
 
 ifdef DEBUG
-CFLAGS := -g -Wall -D$(PARAM) -DDEBUG -march=native
+CFLAGS := -g -Wall -D$(PARAM) -DDEBUG -mavx512f
 OBJDIR := debug/$(PARAM)
 else
-# CFLAGS := -g -Wall -D$(PARAM) -mavx512f
 CFLAGS := -O3 -Wall -D$(PARAM) -mavx512f
-# CFLAGS := -O3 -Wall -D$(PARAM)
 OBJDIR := build/$(PARAM)
 endif
 
@@ -57,9 +56,6 @@ $(BUILDOBJ) : $(OBJDIR)/%.o: %.c $(HEADERS) | $(OBJDIR)
 $(TARGETS) : $(OBJDIR)/%: %.c $(BUILDOBJ)
 	$(CC) $(@F).c $(BUILDOBJ) $(CFLAGS) $(LIBS) -o $@
 
-# BUILD: test
-# 	@echo ""
-
 RUN: test
 	@echo ""
 	@$(OBJDIR)/test
@@ -67,14 +63,9 @@ RUN: test
 RUN_ALL:
 	for p in `./params.py -l`; do \
 	echo "Running par set" $$p; \
-	make BUILD PARAM=$$p; \
+	make RUN PARAM=$$p; \
 	echo ""; \
 	done;
-	# for p in `./params.py -l`; do \
-	# echo "Running par set" $$p; \
-	# make RUN PARAM=$$p; \
-	# echo ""; \
-	# done;
 
 .PHONY: debug KAT
 

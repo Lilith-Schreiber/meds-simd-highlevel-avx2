@@ -331,8 +331,10 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
                     const unsigned char *sk) {
   open_measure_log(measure_log_file);
 
+#ifdef LOG_SIGN
   double freq = osfreq();
   LOG_M("Signing (SIMD)...\n\n");
+#endif
 
   /**
     Load secred keypairs
@@ -398,8 +400,6 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   /**
     Generate seed tree parameter
     **/
-  START(gen_st_param_time);
-
   uint8_t stree[MEDS_st_seed_bytes * SEED_TREE_size] = {0};
   uint8_t alpha[MEDS_st_salt_bytes];
 
@@ -452,12 +452,12 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   pmod_vec_t A_vec[MEDS_m * MEDS_m];
   pmod_vec_t B_vec[MEDS_n * MEDS_n];
 
-  static pmod_mat_t Gs_data[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
-  static pmod_mat_t Gs_dump[MEDS_k * MEDS_m * MEDS_n];
-  static pmod_mat_t *Gs[MEDS_t << 1];
+  static pmod_mat_t G_data[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t G_dump[MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t *G[MEDS_t << 1];
 
-  for (int i = 0; i < MEDS_t; i++) Gs[i] = Gs_data[i];
-  for (int i = MEDS_t; i < MEDS_t << 1; i++) Gs[i] = Gs_dump;
+  for (int i = 0; i < MEDS_t; i++) G[i] = G_data[i];
+  for (int i = MEDS_t; i < MEDS_t << 1; i++) G[i] = G_dump;
 
   int num_valid = 0;
   int num_invalid = 0;
@@ -474,8 +474,8 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   START(gen_rsp_time);
 
   while (num_valid < MEDS_t) {
-
     START(gen_AB_time);
+
     for (int t = 0; t < 16; t++) {
       if (t + num_tried >= MEDS_t + num_invalid) break;
 
@@ -526,7 +526,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_vec(Gs + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
+      pmod_mat_set_entry_vec(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
                              G_vec[i]);
     }
     END(scalarize_time);
@@ -544,7 +544,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
         int idx = MEDS_t + num_invalid + invalids;
 
         indexes[idx] = i;
-        Gs[idx] = Gs_data[i];
+        G[idx] = G_data[i];
         A_tilde[idx] = A_tilde_data[i];
         B_tilde[idx] = B_tilde_data[i];
 
@@ -557,6 +557,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     num_valid += tries - invalids;
     num_invalid += invalids;
     num_tried += tries;
+
     END(check_valid_time);
     check_valid_time_sum += check_valid_time;
   }
@@ -569,8 +570,6 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   for (int i = 0; i < MEDS_t; i++) {
     START(serial_time);
 
-    LOG_MAT_FMT(G_tilde_ti, MEDS_k, MEDS_m * MEDS_n, "G_tilde[%i]", i);
-
     bitstream_t bs;
     uint8_t
         bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
@@ -580,7 +579,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
     for (int r = 0; r < MEDS_k; r++)
       for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
-        bs_write(&bs, Gs_data[i][r * MEDS_m * MEDS_n + j], GFq_bits);
+        bs_write(&bs, G_data[i][r * MEDS_m * MEDS_n + j], GFq_bits);
 
     shake256_absorb(
         &h_shake, bs_buf,
@@ -591,32 +590,6 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   }
 
   END(gen_rsp_time);
-
-  LOG_M("generate response:\n");
-  LOG_M("  %f   (%llu cycles)\n", gen_rsp_time / freq, gen_rsp_time);
-
-  LOG_M("  calculate pi (simd):\n");
-  LOG_M("    %f   (%llu cycles)\n", pi_time_sum / freq, pi_time_sum);
-
-  LOG_M("  calculate syst form (simd):\n");
-  LOG_M("    %f   (%llu cycles)\n", syst_time_sum / freq, syst_time_sum);
-
-  LOG_M("  vectorize data (simd):\n");
-  LOG_M("    %f   (%llu cycles)\n", vectorize_time_sum / freq, vectorize_time_sum);
-
-  LOG_M("  scalarize data (simd):\n");
-  LOG_M("    %f   (%llu cycles)\n", scalarize_time_sum / freq, scalarize_time_sum);
-
-  LOG_M("  generate A, B:\n");
-  LOG_M("    %f   (%llu cycles)\n", gen_AB_time_sum / freq, gen_AB_time_sum);
-
-  LOG_M("  check validity:\n");
-  LOG_M("    %f   (%llu cycles)\n", check_valid_time_sum / freq, check_valid_time_sum);
-
-  LOG_M("  serialize data:\n");
-  LOG_M("    %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
-
-  LOG_M("\n");
 
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
 
@@ -656,7 +629,6 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   for (int i = 0; i < MEDS_t; i++) {
     START(calc_mu_nu_time);
     if (h[i] > 0) {
-
       {
         pmod_mat_t mu[MEDS_m * MEDS_m];
 
@@ -688,17 +660,47 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
       }
 
       bs_finalize(&bs);
-
     }
     END(calc_mu_nu_time);
     calc_mu_nu_time_sum += calc_mu_nu_time;
   }
+
+#ifdef LOG_SIGN
+  LOG_M("generate response:\n");
+  LOG_M("  %f   (%llu cycles)\n", gen_rsp_time / freq, gen_rsp_time);
+
+  LOG_M("  calculate pi (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", pi_time_sum / freq, pi_time_sum);
+
+  LOG_M("  calculate syst form (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", syst_time_sum / freq, syst_time_sum);
+
+  LOG_M("  vectorize data (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", vectorize_time_sum / freq,
+        vectorize_time_sum);
+
+  LOG_M("  scalarize data (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", scalarize_time_sum / freq,
+        scalarize_time_sum);
+
+  LOG_M("  generate A, B:\n");
+  LOG_M("    %f   (%llu cycles)\n", gen_AB_time_sum / freq, gen_AB_time_sum);
+
+  LOG_M("  check validity:\n");
+  LOG_M("    %f   (%llu cycles)\n", check_valid_time_sum / freq,
+        check_valid_time_sum);
+
+  LOG_M("  serialize data:\n");
+  LOG_M("    %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
+
+  LOG_M("\n");
 
   LOG_M("calculate mu and nu (%d loops):\n", MEDS_t);
   LOG_M("  %f   (%llu cycles)\n", calc_mu_nu_time_sum / freq,
         calc_mu_nu_time_sum);
 
   LOG_M("\n");
+#endif
 
   memcpy(sm + MEDS_SIG_BYTES - MEDS_digest_bytes - MEDS_st_salt_bytes, digest,
          MEDS_digest_bytes);
@@ -719,14 +721,14 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
                 const unsigned char *sk) {
   open_measure_log(measure_log_file);
 
+#ifdef LOG_SIGN
   double freq = osfreq();
   LOG_M("Signing...\n\n");
+#endif
 
   /**
     Load secred keypairs
     **/
-  START(load_secred_time);
-
   uint8_t delta[MEDS_sec_seed_bytes];
 
   randombytes(delta, MEDS_sec_seed_bytes);
@@ -783,21 +785,9 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
 
   LOG_VEC(delta, MEDS_sec_seed_bytes);
 
-  // END(load_secred_time);
-  //  LOG_M("  load secred keypairs:\n");
-  //  LOG_M("    %f   (%llu cycles)\n", load_secred_time / freq,
-  //  load_secred_time);
-
   /**
     Generate seed tree parameter
     **/
-  long long gen_rsp_time_sum = 0;
-  long long pi_time_sum = 0;
-  long long syst_time_sum = 0;
-  long long serial_time_sum = 0;
-
-  START(gen_st_param_time);
-
   uint8_t stree[MEDS_st_seed_bytes * SEED_TREE_size] = {0};
   uint8_t alpha[MEDS_st_salt_bytes];
 
@@ -812,14 +802,14 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
   uint8_t *sigma =
       &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(MEDS_seed_tree_height, 0)];
 
-  // END(gen_st_param_time);
-  //  LOG_M("  generate ST parameters:\n");
-  //  LOG_M("    %f   (%llu cycles)\n", gen_st_param_time / freq,
-  //        gen_st_param_time);
-
   /**
     Copy public data to bytes
     **/
+  long long gen_rsp_time_sum = 0;
+  long long pi_time_sum = 0;
+  long long syst_time_sum = 0;
+  long long serial_time_sum = 0;
+
   pmod_mat_t A_tilde_data[MEDS_t * MEDS_m * MEDS_m];
   pmod_mat_t B_tilde_data[MEDS_t * MEDS_m * MEDS_m];
 
@@ -834,11 +824,8 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
   keccak_state h_shake;
   shake256_init(&h_shake);
 
-  START(gen_all_rsp_time);
-
   for (int i = 0; i < MEDS_t; i++) {
-    long gen_rsp_time = 0;
-    gen_rsp_time = -cpucycles();
+    START(gen_rsp_time);
 
     pmod_mat_t G_tilde_ti[MEDS_k * MEDS_m * MEDS_m];
 
@@ -903,20 +890,6 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
     gen_rsp_time_sum += gen_rsp_time;
   }
 
-  LOG_M("generate response\n");
-  LOG_M("  %f   (%llu cycles)\n", gen_rsp_time_sum / freq, gen_rsp_time_sum);
-
-  LOG_M("  calculate pi:\n");
-  LOG_M("    %f   (%llu cycles)\n", pi_time_sum / freq, pi_time_sum);
-
-  LOG_M("  calculate syst form:\n");
-  LOG_M("    %f   (%llu cycles)\n", syst_time_sum / freq, syst_time_sum);
-
-  LOG_M("  serialize data:\n");
-  LOG_M("    %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
-
-  LOG_M("\n");
-
   shake256_absorb(&h_shake, (uint8_t *)m, mlen);
 
   shake256_finalize(&h_shake);
@@ -955,7 +928,6 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
   for (int i = 0; i < MEDS_t; i++) {
     START(calc_mu_nu_time);
     if (h[i] > 0) {
-
       {
         pmod_mat_t mu[MEDS_m * MEDS_m];
 
@@ -983,17 +955,32 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
       }
 
       bs_finalize(&bs);
-
     }
     END(calc_mu_nu_time);
     calc_mu_nu_time_sum += calc_mu_nu_time;
   }
+
+#ifdef LOG_SIGN
+  LOG_M("generate response:\n");
+  LOG_M("  %f   (%llu cycles)\n", gen_rsp_time_sum / freq, gen_rsp_time_sum);
+
+  LOG_M("  calculate pi:\n");
+  LOG_M("    %f   (%llu cycles)\n", pi_time_sum / freq, pi_time_sum);
+
+  LOG_M("  calculate syst form:\n");
+  LOG_M("    %f   (%llu cycles)\n", syst_time_sum / freq, syst_time_sum);
+
+  LOG_M("  serialize data:\n");
+  LOG_M("    %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
+
+  LOG_M("\n");
 
   LOG_M("calculate mu and nu (%d loops):\n", MEDS_t);
   LOG_M("  %f   (%llu cycles)\n", calc_mu_nu_time_sum / freq,
         calc_mu_nu_time_sum);
 
   LOG_M("\n");
+#endif
 
   memcpy(sm + MEDS_SIG_BYTES - MEDS_digest_bytes - MEDS_st_salt_bytes, digest,
          MEDS_digest_bytes);
@@ -1009,10 +996,24 @@ int crypto_sign(unsigned char *sm, unsigned long long *smlen,
   return 0;
 }
 
-int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
-                     const unsigned char *sm, unsigned long long smlen,
-                     const unsigned char *pk) {
+int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
+                         const unsigned char *sm, unsigned long long smlen,
+                         const unsigned char *pk) {
+  open_measure_log(measure_log_file);
+  // clear_measure_log("open_vec.txt");
+  // open_measure_log("open_vec.txt");
+
+#ifdef LOG_VERIFY
+  double freq = osfreq();
+  LOG_M("Verifying (SIMD)...\n\n");
+
   LOG_HEX(sm, smlen);
+#endif
+
+  /**
+    Load public keys
+    **/
+  START(load_public_time);
 
   pmod_mat_t G_data[MEDS_k * MEDS_m * MEDS_n * MEDS_s];
   pmod_mat_t *G[MEDS_s];
@@ -1054,6 +1055,17 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
     }
   }
 
+  END(load_public_time);
+
+#ifdef LOG_VERIFY
+  // LOG_M("load public keypairs:\n");
+  // LOG_M("  %f   (%llu cycles)\n", load_public_time / freq, load_public_time);
+  //
+  // LOG_M("\n");
+#endif
+
+  START(st_time);
+
   for (int i = 0; i < MEDS_s; i++)
     LOG_MAT_FMT(G[i], MEDS_k, MEDS_m * MEDS_n, "G[%i]", i);
 
@@ -1082,6 +1094,378 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 
   path_to_stree(stree, h, path, alpha);
 
+  END(st_time);
+
+#ifdef LOG_VERIFY
+  // LOG_M("parse seed tree:\n");
+  // LOG_M("  %f   (%llu cycles)\n", st_time / freq, st_time);
+  //
+  // LOG_M("\n");
+#endif
+
+  uint8_t *sigma =
+      &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(MEDS_seed_tree_height, 0)];
+
+  /**
+    Calculate verification matrices
+     **/
+  long long calc_veri_time_sum = 0;
+  long long pi_time_sum = 0;
+  long long syst_time_sum = 0;
+  long long vectorize_time_sum = 0;
+  long long scalarize_time_sum = 0;
+
+  pmod_mat_t mu_data[MEDS_t][MEDS_m * MEDS_m];
+  pmod_mat_t nu_data[MEDS_t][MEDS_n * MEDS_n];
+  pmod_mat_t mu_dump[MEDS_m * MEDS_m];
+  pmod_mat_t nu_dump[MEDS_n * MEDS_n];
+
+  pmod_mat_t *mu[MEDS_t << 1];
+  pmod_mat_t *nu[MEDS_t << 1];
+
+  for (int i = 0; i < MEDS_t; i++) {
+    mu[i] = mu_data[i];
+    nu[i] = nu_data[i];
+  }
+  for (int i = MEDS_t; i < MEDS_t << 1; i++) {
+    mu[i] = mu_dump;
+    nu[i] = nu_dump;
+  }
+
+  static pmod_mat_t G_hat_data[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
+  static pmod_mat_t G_dump[MEDS_k * MEDS_m * MEDS_n];
+
+  pmod_mat_t *G_hat[MEDS_t << 1];
+
+  for (int i = 0; i < MEDS_t; i++) G_hat[i] = G_hat_data[i];
+  for (int i = MEDS_t; i < MEDS_t << 1; i++) G_hat[i] = G_dump;
+
+  pmod_mat_t *G0[MEDS_t << 1];
+
+  for (int i = MEDS_t; i < MEDS_t << 1; i++) G0[i] = G_dump;
+
+  pmod_vec_t mu_vec[MEDS_m * MEDS_m];
+  pmod_vec_t nu_vec[MEDS_n * MEDS_n];
+
+  pmod_vec_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_vec_t G_hat_vec[MEDS_k * MEDS_m * MEDS_n];
+
+  int num_valid = 0;
+  int num_invalid = 0;
+
+  int num_tried = 0;
+  int indexes[MEDS_t << 1];
+
+  for (int i = 0; i < MEDS_t; i++) indexes[i] = i;
+  for (int i = MEDS_t; i < (MEDS_t << 1); i++) indexes[i] = 0;
+
+  keccak_state shake;
+  shake256_init(&shake);
+
+  while (num_valid < MEDS_t) {
+    START(calc_veri_time);
+
+    for (int t = 0; t < 16; t++) {
+      if (t + num_tried >= MEDS_t + num_invalid) break;
+
+      int i = indexes[t + num_tried];
+      int idx = t + num_tried;
+
+      if (h[i] > 0) {
+        for (int j = 0; j < MEDS_m * MEDS_m; j++)
+          mu[idx][j] = bs_read(&bs, GFq_bits);
+
+        bs_finalize(&bs);
+
+        for (int j = 0; j < MEDS_n * MEDS_n; j++)
+          nu[idx][j] = bs_read(&bs, GFq_bits);
+
+        bs_finalize(&bs);
+
+        LOG_MAT_FMT(mu[idx], MEDS_m, MEDS_m, "mu[%i]", i);
+        LOG_MAT_FMT(nu[idx], MEDS_n, MEDS_n, "nu[%i]", i);
+
+        G0[idx] = G[h[i]];
+      } else {
+        LOG_VEC_FMT(&sigma[i * MEDS_st_seed_bytes], MEDS_st_seed_bytes,
+                    "seeds[%i]", i);
+
+        uint8_t sigma_A_tilde_i[MEDS_st_seed_bytes];
+        uint8_t sigma_B_tilde_i[MEDS_st_seed_bytes];
+
+        XOF((uint8_t *[]){sigma_A_tilde_i, sigma_B_tilde_i,
+                          &sigma[i * MEDS_st_seed_bytes]},
+            (size_t[]){MEDS_st_seed_bytes, MEDS_st_seed_bytes,
+                       MEDS_st_seed_bytes},
+            &sigma[i * MEDS_st_seed_bytes], MEDS_st_seed_bytes, 3);
+
+        LOG_VEC(sigma_A_tilde_i, MEDS_sec_seed_bytes);
+        rnd_inv_matrix(mu[idx], MEDS_m, MEDS_m, sigma_A_tilde_i,
+                       MEDS_st_seed_bytes);
+
+        LOG_VEC(sigma_B_tilde_i, MEDS_sec_seed_bytes);
+        rnd_inv_matrix(nu[idx], MEDS_n, MEDS_n, sigma_B_tilde_i,
+                       MEDS_st_seed_bytes);
+
+        LOG_MAT_FMT(mu[idx], MEDS_m, MEDS_m, "A_tilde[%i]", i);
+        LOG_MAT_FMT(nu[idx], MEDS_n, MEDS_n, "B_tilde[%i]", i);
+
+        G0[idx] = G[0];
+      }
+    }
+
+    START(vectorize_time);
+    for (int i = 0; i < MEDS_m * MEDS_m; i++)
+      mu_vec[i] = pmod_mat_entry_vec(mu + num_tried, 1, MEDS_m * MEDS_m, 0, i);
+    for (int i = 0; i < MEDS_n * MEDS_n; i++)
+      nu_vec[i] = pmod_mat_entry_vec(nu + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+    for (int i = 0; i < MEDS_k * MEDS_n * MEDS_n; i++)
+      G0_vec[i] = pmod_mat_entry_vec(G0 + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+    END(vectorize_time);
+    vectorize_time_sum += vectorize_time;
+
+    START(pi_time);
+    pi_vec(G_hat_vec, mu_vec, nu_vec, G0_vec);
+    END(pi_time);
+    pi_time_sum += pi_time;
+
+    START(syst_time);
+    pmod_vec_mask_t valid =
+        pmod_mat_syst_ct_vec_inv(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
+    END(syst_time);
+    syst_time_sum += syst_time;
+
+    START(scalarize_time);
+    for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
+      pmod_mat_set_entry_vec(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
+                             G_hat_vec[i]);
+    }
+    END(scalarize_time);
+    scalarize_time_sum += scalarize_time;
+
+    int invalids = 0;
+    int tries = 0;
+
+    for (int t = 0; t < 16; t++) {
+      if (t + num_tried >= MEDS_t + num_invalid) break;
+
+      int i = indexes[t + num_tried];
+      // if (t + num_tried == 2 || extract_mask(valid, t) == 0) {
+      if (extract_mask(valid, t) == 0) {
+        int idx = MEDS_t + num_invalid + invalids;
+
+        indexes[idx] = i;
+        mu[idx] = mu_data[i];
+        nu[idx] = nu_data[i];
+        G0[idx] = G[h[i]];
+        G_hat[idx] = G_hat_data[i];
+
+        invalids++;
+
+        LOG_M("singular\n");
+      }
+
+      tries++;
+    }
+
+    num_valid += tries - invalids;
+    num_invalid += invalids;
+    num_tried += tries;
+
+    END(calc_veri_time);
+    calc_veri_time_sum += calc_veri_time;
+  }
+
+  /*
+     Serialize results
+     */
+  long long serial_time_sum = 0;
+
+  for (int i = 0; i < MEDS_t; i++) {
+    START(serial_time);
+
+    bitstream_t bs;
+    uint8_t
+        bs_buf[CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8)];
+
+    bs_init(&bs, bs_buf,
+            CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+    for (int r = 0; r < MEDS_k; r++)
+      for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+        bs_write(&bs, G_hat[i][r * MEDS_m * MEDS_n + j], GFq_bits);
+
+    shake256_absorb(
+        &shake, bs_buf,
+        CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+    END(serial_time);
+    serial_time_sum += serial_time;
+  }
+
+#ifdef LOG_VERIFY
+  LOG_M("verify:\n");
+  LOG_M("  %f   (%llu cycles)\n", calc_veri_time_sum / freq,
+        calc_veri_time_sum);
+
+  LOG_M("  calculate pi (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", pi_time_sum / freq, pi_time_sum);
+
+  LOG_M("  calculate syst form (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", syst_time_sum / freq, syst_time_sum);
+
+  LOG_M("  vectorize data (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", vectorize_time_sum / freq,
+        vectorize_time_sum);
+
+  LOG_M("  scalarize data (simd):\n");
+  LOG_M("    %f   (%llu cycles)\n", scalarize_time_sum / freq,
+        scalarize_time_sum);
+
+  LOG_M("\n");
+
+  LOG_M("serialize data:\n");
+  LOG_M("  %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
+
+  LOG_M("\n");
+#endif
+
+  shake256_absorb(&shake, (uint8_t *)(sm + MEDS_SIG_BYTES),
+                  smlen - MEDS_SIG_BYTES);
+
+  shake256_finalize(&shake);
+
+  uint8_t check[MEDS_digest_bytes];
+
+  shake256_squeeze(check, MEDS_digest_bytes, &shake);
+
+  if (memcmp(digest, check, MEDS_digest_bytes) != 0) {
+    fprintf(stderr, "Signature verification failed!\n");
+
+    return -1;
+  }
+
+  memcpy(m, (uint8_t *)(sm + MEDS_SIG_BYTES), smlen - MEDS_SIG_BYTES);
+  *mlen = smlen - MEDS_SIG_BYTES;
+
+  fclose(measure_log);
+
+  return 0;
+}
+
+int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
+                     const unsigned char *sm, unsigned long long smlen,
+                     const unsigned char *pk) {
+  open_measure_log(measure_log_file);
+
+#ifdef LOG_VERIFY
+  double freq = osfreq();
+  LOG_M("Verifying...\n\n");
+
+  LOG_HEX(sm, smlen);
+#endif
+
+  /**
+    Load public keys
+    **/
+  START(load_public_time);
+
+  pmod_mat_t G_data[MEDS_k * MEDS_m * MEDS_n * MEDS_s];
+  pmod_mat_t *G[MEDS_s];
+
+  for (int i = 0; i < MEDS_s; i++) G[i] = &G_data[i * MEDS_k * MEDS_m * MEDS_n];
+
+  rnd_sys_mat(G[0], MEDS_k, MEDS_m * MEDS_n, pk, MEDS_pub_seed_bytes);
+
+  {
+    bitstream_t bs;
+
+    bs_init(&bs, (uint8_t *)pk + MEDS_pub_seed_bytes,
+            MEDS_PK_BYTES - MEDS_pub_seed_bytes);
+
+    for (int i = 1; i < MEDS_s; i++) {
+      for (int r = 0; r < MEDS_k; r++)
+        for (int c = 0; c < MEDS_k; c++)
+          if (r == c)
+            pmod_mat_set_entry(G[i], MEDS_k, MEDS_m * MEDS_n, r, c, 1);
+          else
+            pmod_mat_set_entry(G[i], MEDS_k, MEDS_m * MEDS_n, r, c, 0);
+
+      for (int j = (MEDS_m - 1) * MEDS_n; j < MEDS_m * MEDS_n; j++)
+        G[i][MEDS_m * MEDS_n + j] = bs_read(&bs, GFq_bits);
+
+      for (int r = 2; r < MEDS_k; r++)
+        for (int j = MEDS_k; j < MEDS_m * MEDS_n; j++)
+          G[i][r * MEDS_m * MEDS_n + j] = bs_read(&bs, GFq_bits);
+
+      for (int ii = 0; ii < MEDS_m; ii++)
+        for (int j = 0; j < MEDS_n; j++)
+          G[i][ii * MEDS_n + j] = ii == j ? 1 : 0;
+
+      for (int ii = 0; ii < MEDS_m - 1; ii++)
+        for (int j = 0; j < MEDS_n; j++)
+          G[i][MEDS_m * MEDS_n + ii * MEDS_n + j] = (ii + 1) == j ? 1 : 0;
+
+      bs_finalize(&bs);
+    }
+  }
+
+  END(load_public_time);
+
+#ifdef LOG_VERIFY
+  // LOG_M("load public keypairs:\n");
+  // LOG_M("  %f   (%llu cycles)\n", load_public_time / freq, load_public_time);
+  //
+  // LOG_M("\n");
+#endif
+
+  START(st_time);
+
+  for (int i = 0; i < MEDS_s; i++)
+    LOG_MAT_FMT(G[i], MEDS_k, MEDS_m * MEDS_n, "G[%i]", i);
+
+  uint8_t *digest =
+      (uint8_t *)sm + (MEDS_SIG_BYTES - MEDS_digest_bytes - MEDS_st_salt_bytes);
+
+  uint8_t *alpha = (uint8_t *)sm + (MEDS_SIG_BYTES - MEDS_st_salt_bytes);
+
+  LOG_VEC(digest, MEDS_digest_bytes);
+
+  uint8_t h[MEDS_t];
+
+  parse_hash(digest, MEDS_digest_bytes, h, MEDS_t);
+
+  bitstream_t bs;
+
+  bs_init(&bs, (uint8_t *)sm,
+          MEDS_w * (CEILING(MEDS_m * MEDS_m * GFq_bits, 8) +
+                    CEILING(MEDS_n * MEDS_n * GFq_bits, 8)));
+
+  uint8_t *path =
+      (uint8_t *)sm + MEDS_w * (CEILING(MEDS_m * MEDS_m * GFq_bits, 8) +
+                                CEILING(MEDS_n * MEDS_n * GFq_bits, 8));
+
+  uint8_t stree[MEDS_st_seed_bytes * SEED_TREE_size] = {0};
+
+  path_to_stree(stree, h, path, alpha);
+
+  END(st_time);
+
+#ifdef LOG_VERIFY
+  // LOG_M("parse seed tree:\n");
+  // LOG_M("  %f   (%llu cycles)\n", st_time / freq, st_time);
+  //
+  // LOG_M("\n");
+#endif
+
+  /**
+    Calculate verification matrices
+     **/
+  long long calc_veri_time_sum = 0;
+  long long pi_time_sum = 0;
+  long long syst_time_sum = 0;
+  long long serial_time_sum = 0;
+
   uint8_t *sigma =
       &stree[MEDS_st_seed_bytes * SEED_TREE_ADDR(MEDS_seed_tree_height, 0)];
 
@@ -1094,6 +1478,8 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
   shake256_init(&shake);
 
   for (int i = 0; i < MEDS_t; i++) {
+    START(calc_veri_time);
+
     if (h[i] > 0) {
       for (int j = 0; j < MEDS_m * MEDS_m; j++) mu[j] = bs_read(&bs, GFq_bits);
 
@@ -1106,11 +1492,17 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
       LOG_MAT_FMT(mu, MEDS_m, MEDS_m, "mu[%i]", i);
       LOG_MAT_FMT(nu, MEDS_n, MEDS_n, "nu[%i]", i);
 
+      START(pi_time);
       pi(G_hat_i, mu, nu, G[h[i]]);
+      END(pi_time);
+      pi_time_sum += pi_time;
 
       LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
 
+      START(syst_time);
       pmod_mat_syst_ct(G_hat_i, MEDS_k, MEDS_m * MEDS_n);
+      END(syst_time);
+      syst_time_sum += syst_time;
 
       LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
     } else {
@@ -1141,18 +1533,29 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
         LOG_MAT_FMT(A_tilde, MEDS_m, MEDS_m, "A_tilde[%i]", i);
         LOG_MAT_FMT(B_tilde, MEDS_n, MEDS_n, "B_tilde[%i]", i);
 
+        START(pi_time);
         pi(G_hat_i, A_tilde, B_tilde, G[0]);
+        END(pi_time);
+        pi_time_sum += pi_time;
 
         LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
 
-        if (pmod_mat_syst_ct(G_hat_i, MEDS_k, MEDS_m * MEDS_n) == 0) {
-          LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
-          break;
+        START(syst_time);
+        if (pmod_mat_syst_ct(G_hat_i, MEDS_k, MEDS_m * MEDS_n) != 0) {
+          LOG_M("singular\n");
+          continue;
         }
+        END(syst_time);
+        syst_time_sum += syst_time;
 
-        LOG_MAT_FMT(G_hat_i, MEDS_k, MEDS_m * MEDS_n, "G_hat[%i]", i);
+        break;
       }
     }
+
+    END(calc_veri_time);
+    calc_veri_time_sum += calc_veri_time;
+
+    START(serial_time);
 
     bitstream_t bs;
     uint8_t
@@ -1168,7 +1571,29 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
     shake256_absorb(
         &shake, bs_buf,
         CEILING((MEDS_k * (MEDS_m * MEDS_n - MEDS_k)) * GFq_bits, 8));
+
+    END(serial_time);
+    serial_time_sum += serial_time;
   }
+
+#ifdef LOG_VERIFY
+  LOG_M("verify:\n");
+  LOG_M("  %f   (%llu cycles)\n", calc_veri_time_sum / freq,
+        calc_veri_time_sum);
+
+  LOG_M("  calculate pi:\n");
+  LOG_M("    %f   (%llu cycles)\n", pi_time_sum / freq, pi_time_sum);
+
+  LOG_M("  calculate syst form:\n");
+  LOG_M("    %f   (%llu cycles)\n", syst_time_sum / freq, syst_time_sum);
+
+  LOG_M("\n");
+
+  LOG_M("serialize data:\n");
+  LOG_M("  %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
+
+  LOG_M("\n");
+#endif
 
   shake256_absorb(&shake, (uint8_t *)(sm + MEDS_SIG_BYTES),
                   smlen - MEDS_SIG_BYTES);
@@ -1187,6 +1612,8 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 
   memcpy(m, (uint8_t *)(sm + MEDS_SIG_BYTES), smlen - MEDS_SIG_BYTES);
   *mlen = smlen - MEDS_SIG_BYTES;
+
+  fclose(measure_log);
 
   return 0;
 }

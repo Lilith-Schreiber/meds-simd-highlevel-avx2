@@ -48,17 +48,15 @@ int main(int argc, char *argv[]) {
     uint8_t sig[CRYPTO_BYTES + sizeof(msg)] = {0};
     unsigned long long sig_len = sizeof(sig);
 
-    time = -cpucycles();
-    crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
-    time += cpucycles();
-    printf("Normal time: %llu\n", time);
+    // time = -cpucycles();
+    // crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
+    // time += cpucycles();
+    // printf("sign (normal): %llu\n", time);
 
     time = -cpucycles();
     crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += cpucycles();
-    printf("  SIMD time: %llu\n", time);
-
-    // return 0;
+    // printf("sign   (SIMD): %llu\n", time);
 
     if (time < sign_time)
       sign_time = time;
@@ -66,9 +64,17 @@ int main(int argc, char *argv[]) {
     unsigned char msg_out[4];
     unsigned long long msg_out_len = sizeof(msg_out);
 
+    int ret;
+
+    // time = -cpucycles();
+    // ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
+    // time += cpucycles();
+    // printf("verify (normal): %llu\n", time);
+
     time = -cpucycles();
-    int ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
+    ret = crypto_sign_open_vec(msg_out, &msg_out_len, sig, sizeof(sig), pk);
     time += cpucycles();
+    // printf("verify   (SIMD): %llu\n", time);
 
     if (time < verify_time)
       verify_time = time;

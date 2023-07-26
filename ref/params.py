@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from math import log
 from math import log2
 from math import ceil
+from math import floor
 from math import comb
 
 
@@ -21,8 +22,7 @@ class Param:
     t: int
     w: int
     k: int
-
-    _name: str = None
+    _name: str | None = None
 
     def __str__(self):
         if self._name:
@@ -51,7 +51,9 @@ class Param:
 
         q_bits = ceil(log2(q))
 
-        return (s - 1) * ceil(((k * (m*n - k) - (m*n - k + (m-1)*n-k)) * ceil(log2(q))) / 8) + pub_seed_bytes
+        return (s - 1) * ceil(
+            ((k * (m * n - k) - (m * n - k + (m - 1) * n - k)) * ceil(log2(q))) / 8
+        ) + pub_seed_bytes
 
     @property
     def sk_size(self):
@@ -65,15 +67,19 @@ class Param:
         q_bits = ceil(log2(q))
 
         def mat_bytes(i, j):
-            return ceil(i*j*q_bits/8)
+            return ceil(i * j * q_bits / 8)
 
-        return (s-1)*(mat_bytes(m, m) + mat_bytes(n, n)) + sec_seed_bytes + self.pub_seed_bytes
+        return (
+            (s - 1) * (mat_bytes(m, m) + mat_bytes(n, n))
+            + sec_seed_bytes
+            + self.pub_seed_bytes
+        )
 
         # return ceil((((s-1)*m*m + (s-1)*n*n + k*(m*n-k))*ceil(log2(q)))/8) + sec_seed_bytes
 
     @property
     def fiat_shamir(self):
-        return log2(comb(self.t, self.w) * (self.s - 1)**self.w)
+        return log2(comb(self.t, self.w) * (self.s - 1) ** self.w)
 
     @property
     def seed_tree_cost(self):
@@ -85,7 +91,7 @@ class Param:
         t = self.t
         w = self.w
 
-        return (2**ceil(log2(w)) + w * (ceil(log2(t)) - ceil(log2(w)) - 1))
+        return 2 ** ceil(log2(w)) + w * (ceil(log2(t)) - ceil(log2(w)) - 1)
 
     @property
     def sig_size(self):
@@ -98,8 +104,11 @@ class Param:
 
         q_bits = ceil(log2(q))
 
-        sig_size = digest_bytes + w * \
-            (ceil(m*m*q_bits/8) + ceil(n*n*q_bits/8)) + self.seed_tree_cost
+        sig_size = (
+            digest_bytes
+            + w * (ceil(m * m * q_bits / 8) + ceil(n * n * q_bits / 8))
+            + self.seed_tree_cost
+        )
 
         sig_size += self.st_salt_bytes
 
@@ -139,103 +148,122 @@ class Param:
 
 params = [
     # Level I
-    Param(digest_bytes=256 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=128 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=4093,
-          m=14,
-          n=14,
-          k=14,
-          s=4,
-          t=1152,
-          w=14),
-
-    Param(digest_bytes=256 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=128 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=4093,
-          m=14,
-          n=14,
-          k=14,
-          s=5,
-          t=192,
-          w=20),
-
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=128 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=4093,
+        m=14,
+        n=14,
+        k=14,
+        s=4,
+        t=1152,
+        w=14,
+    ),
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=128 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=4093,
+        m=14,
+        n=14,
+        k=14,
+        s=5,
+        t=192,
+        w=20,
+    ),
     # Level III
-
-    Param(digest_bytes=256 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=192 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=4093,
-          m=22,
-          n=22,
-          k=22,
-          s=4,
-          t=608,
-          w=26),
-
-    Param(digest_bytes=256 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=192 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=4093,
-          m=22,
-          n=22,
-          k=22,
-          s=5,
-          t=160,
-          w=36),
-
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=192 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=4093,
+        m=22,
+        n=22,
+        k=22,
+        s=4,
+        t=608,
+        w=26,
+    ),
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=192 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=4093,
+        m=22,
+        n=22,
+        k=22,
+        s=5,
+        t=160,
+        w=36,
+    ),
     # Level V
-
-    Param(digest_bytes=256 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=256 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=2039,
-          m=30,
-          n=30,
-          k=30,
-          s=5,
-          t=192,
-          w=52),
-
-    Param(digest_bytes=256 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=256 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=2039,
-          m=30,
-          n=30,
-          k=30,
-          s=6,
-          t=112,
-          w=66),
-
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=256 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=2039,
+        m=30,
+        n=30,
+        k=30,
+        s=5,
+        t=192,
+        w=52,
+    ),
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=256 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=2039,
+        m=30,
+        n=30,
+        k=30,
+        s=6,
+        t=112,
+        w=66,
+    ),
+    Param(
+        digest_bytes=256 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=256 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=2039,
+        m=30,
+        n=30,
+        k=30,
+        s=7,
+        t=113,
+        w=66,
+    ),
     # toy
-
-    Param(digest_bytes=128 >> 3,
-          pub_seed_bytes=256 >> 3,
-          sec_seed_bytes=256 >> 3,
-          st_seed_bytes=128 >> 3,
-          st_salt_bytes=256 >> 3,
-          q=8191,
-          m=10,
-          n=10,
-          k=10,
-          s=4,
-          t=16,
-          w=6,
-          _name="toy"),
+    Param(
+        digest_bytes=128 >> 3,
+        pub_seed_bytes=256 >> 3,
+        sec_seed_bytes=256 >> 3,
+        st_seed_bytes=128 >> 3,
+        st_salt_bytes=256 >> 3,
+        q=8191,
+        m=10,
+        n=10,
+        k=10,
+        s=4,
+        t=16,
+        w=6,
+        _name="toy",
+    ),
 ]
 
 for i, p in enumerate(params):
@@ -256,11 +284,24 @@ def print_table():
         sk = param.sk_size
         sig = param.sig_size
 
-        tab.append([param, param.q, param.n, param.m, param.k,
-                   param.s, param.t, param.w, pk, sk, sig, fs])
+        tab.append(
+            [
+                param,
+                param.q,
+                param.n,
+                param.m,
+                param.k,
+                param.s,
+                param.t,
+                param.w,
+                pk,
+                sk,
+                sig,
+                fs,
+            ]
+        )
 
-    headers = ["set", "q", "n", "m", "k", "s",
-               "t", "w", "pk", "sk", "sig", "fs"]
+    headers = ["set", "q", "n", "m", "k", "s", "t", "w", "pk", "sk", "sig", "fs"]
 
     tab = tabulate(tab, headers, tablefmt="latex_booktabs")
 
@@ -302,19 +343,44 @@ def interactive():
 
         for t in range_t:
             for w in range(1, min(t, 100)):
-                loc = Param(digest_bytes, pub_seed_bytes, sec_seed_bytes,
-                            st_seed_bytes, st_salt_bytes, q, n, m, s, t, w, k)
+                loc = Param(
+                    digest_bytes,
+                    pub_seed_bytes,
+                    sec_seed_bytes,
+                    st_seed_bytes,
+                    st_salt_bytes,
+                    q,
+                    n,
+                    m,
+                    s,
+                    t,
+                    w,
+                    k,
+                )
 
-                if loc.fiat_shamir > st_seed_bytes*8:
+                if loc.fiat_shamir > st_seed_bytes * 8:
                     if loc.sig_size < tmp.sig_size:
                         tmp = loc
 
         print(
-            f"sig size: {tmp.sig_size}  pk size: {tmp.pk_size} -> t = {tmp.t}, w = {tmp.w}")
+            f"sig size: {tmp.sig_size}  pk size: {tmp.pk_size} -> t = {tmp.t}, w = {tmp.w}"
+        )
 
     def dump():
-        Param(digest_bytes, pub_seed_bytes, sec_seed_bytes,
-              st_seed_bytes, st_salt_bytes, q, n, m, s, t, w, k).dump()
+        Param(
+            digest_bytes,
+            pub_seed_bytes,
+            sec_seed_bytes,
+            st_seed_bytes,
+            st_salt_bytes,
+            q,
+            n,
+            m,
+            s,
+            t,
+            w,
+            k,
+        ).dump()
 
     import code
     import readline
@@ -325,14 +391,16 @@ def interactive():
 
     readline.set_completer(rlcompleter.Completer(vars).complete)
     readline.parse_and_bind("tab: complete")
-    code.InteractiveConsole(vars).interact(banner="""
+    code.InteractiveConsole(vars).interact(
+        banner="""
 
 Explore paramter space interactively.
 
 Local variables q, n, m, ... can be dumped via 'dump()'.
 
 (Exit python prompt with Ctrl-D)
-""")
+"""
+    )
 
 
 def gen_api(par_set):
@@ -341,7 +409,8 @@ def gen_api(par_set):
 
     par_set = par_list[par_set]
 
-    print(f"""#ifndef API_H
+    print(
+        f"""#ifndef API_H
 #define API_H
 
 #define CRYPTO_SECRETKEYBYTES {par_set.sk_size}
@@ -361,14 +430,27 @@ int crypto_sign(
     const unsigned char *sk
   );
 
+int crypto_sign_vec(
+    unsigned char *sm, unsigned long long *smlen,
+    const unsigned char *m, unsigned long long mlen,
+    const unsigned char *sk
+  );
+
 int crypto_sign_open(
     unsigned char *m, unsigned long long *mlen,
     const unsigned char *sm, unsigned long long smlen,
     const unsigned char *pk
   );
 
+int crypto_sign_open_vec(
+    unsigned char *m, unsigned long long *mlen,
+    const unsigned char *sm, unsigned long long smlen,
+    const unsigned char *pk
+  );
+
 #endif
-""")
+"""
+    )
 
 
 def gen_param(parset):
@@ -405,6 +487,12 @@ def gen_param(parset):
         print(f"{ind}#define GFq_t uint{ceil(log(param.q, 256))*8}_t")
         print(f"{ind}#define GFq_bits {ceil(log(param.q, 2))}")
         print(f"{ind}#define GFq_bytes {ceil(ceil(log(param.q, 2))/8)}")
+
+        print()
+
+        beta = 2 ** ceil(log(param.q, 2))
+        print(f"{ind}#define MEDS_rep {floor((beta**2 - 1) / param.q) - beta}")
+        print(f"{ind}#define GFq_b2r {(beta**2) % param.q}")
 
         print()
 
@@ -451,18 +539,16 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("-t", "--table", action='store_true',
-                        help="print Latex table")
-    parser.add_argument("-l", "--list", action='store_true',
-                        help="list param set names")
-    parser.add_argument("-i", "--interactive",
-                        action='store_true', help="interactive python console")
-    parser.add_argument("-a", "--api", action='store_true',
-                        help="generate api.h")
-    parser.add_argument("-p", "--param", action='store_true',
-                        help="generate param.h")
-    parser.add_argument('parset', nargs='?',
-                        help="parameter set", default=None)
+    parser.add_argument("-t", "--table", action="store_true", help="print Latex table")
+    parser.add_argument(
+        "-l", "--list", action="store_true", help="list param set names"
+    )
+    parser.add_argument(
+        "-i", "--interactive", action="store_true", help="interactive python console"
+    )
+    parser.add_argument("-a", "--api", action="store_true", help="generate api.h")
+    parser.add_argument("-p", "--param", action="store_true", help="generate param.h")
+    parser.add_argument("parset", nargs="?", help="parameter set", default=None)
 
     args = parser.parse_args()
 

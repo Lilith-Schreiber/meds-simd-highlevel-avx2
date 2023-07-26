@@ -8,3 +8,4 @@ build/
 debug/
 __pycache__/
 MEDS/
+.cache/

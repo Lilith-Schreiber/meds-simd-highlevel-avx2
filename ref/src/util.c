@@ -7,7 +7,6 @@
 #include "log.h"
 #include "matrixmod.h"
 #include "measure.h"
-#include "meds.h"
 #include "params.h"
 #include "vec.h"
 
