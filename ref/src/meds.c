@@ -421,8 +421,8 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   long long syst_time_sum = 0;
   long long vectorize_time_sum = 0;
   long long scalarize_time_sum = 0;
-  long long gen_AB_time_sum = 0;
-  long long check_valid_time_sum = 0;
+  // long long gen_AB_time_sum = 0;
+  // long long check_valid_time_sum = 0;
 
   pmod_mat_t A_tilde_data[MEDS_t][MEDS_m * MEDS_m];
   pmod_mat_t B_tilde_data[MEDS_t][MEDS_n * MEDS_n];
@@ -474,7 +474,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   START(gen_rsp_time);
 
   while (num_valid < MEDS_t) {
-    START(gen_AB_time);
+    // START(gen_AB_time);
 
     for (int t = 0; t < 16; t++) {
       if (t + num_tried >= MEDS_t + num_invalid) break;
@@ -498,8 +498,8 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
       LOG_MAT_FMT(A_tilde[i], MEDS_m, MEDS_m, "A_tilde[%i]", i);
       LOG_MAT_FMT(B_tilde[i], MEDS_n, MEDS_n, "B_tilde[%i]", i);
     }
-    END(gen_AB_time);
-    gen_AB_time_sum += gen_AB_time;
+    // END(gen_AB_time);
+    // gen_AB_time_sum += gen_AB_time;
 
     START(vectorize_time);
     for (int i = 0; i < MEDS_m * MEDS_m; i++)
@@ -532,7 +532,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     END(scalarize_time);
     scalarize_time_sum += scalarize_time;
 
-    START(check_valid_time);
+    // START(check_valid_time);
     int invalids = 0;
     int tries = 0;
 
@@ -558,8 +558,8 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     num_invalid += invalids;
     num_tried += tries;
 
-    END(check_valid_time);
-    check_valid_time_sum += check_valid_time;
+    // END(check_valid_time);
+    // check_valid_time_sum += check_valid_time;
   }
 
   /*
@@ -683,12 +683,12 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   LOG_M("    %f   (%llu cycles)\n", scalarize_time_sum / freq,
         scalarize_time_sum);
 
-  LOG_M("  generate A, B:\n");
-  LOG_M("    %f   (%llu cycles)\n", gen_AB_time_sum / freq, gen_AB_time_sum);
+  // LOG_M("  generate A, B:\n");
+  // LOG_M("    %f   (%llu cycles)\n", gen_AB_time_sum / freq, gen_AB_time_sum);
 
-  LOG_M("  check validity:\n");
-  LOG_M("    %f   (%llu cycles)\n", check_valid_time_sum / freq,
-        check_valid_time_sum);
+  // LOG_M("  check validity:\n");
+  // LOG_M("    %f   (%llu cycles)\n", check_valid_time_sum / freq,
+  //       check_valid_time_sum);
 
   LOG_M("  serialize data:\n");
   LOG_M("    %f   (%llu cycles)\n", serial_time_sum / freq, serial_time_sum);
@@ -1237,8 +1237,8 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_vec(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
-                             G_hat_vec[i]);
+      pmod_mat_set_entry_vec(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0,
+                             i, G_hat_vec[i]);
     }
     END(scalarize_time);
     scalarize_time_sum += scalarize_time;
@@ -1262,7 +1262,7 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
         invalids++;
 
-        LOG_M("singular\n");
+        // LOG_M("singular\n");
       }
 
       tries++;
@@ -1542,7 +1542,7 @@ int crypto_sign_open(unsigned char *m, unsigned long long *mlen,
 
         START(syst_time);
         if (pmod_mat_syst_ct(G_hat_i, MEDS_k, MEDS_m * MEDS_n) != 0) {
-          LOG_M("singular\n");
+          // LOG_M("singular\n");
           continue;
         }
         END(syst_time);

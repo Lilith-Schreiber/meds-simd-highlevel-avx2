@@ -3,8 +3,8 @@
 
 #define LOG_M(...) fprintf(measure_log, __VA_ARGS__)
 
-// #define LOG_SIGN
-// #define LOG_VERIFY
+#define LOG_SIGN
+#define LOG_VERIFY
 
 void open_measure_log(const char*);
 

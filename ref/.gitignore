@@ -1,7 +1,6 @@
 .*.swp
 *.req
 *.rsp
-*.txt
 bench.txt
 params.h
 build/
