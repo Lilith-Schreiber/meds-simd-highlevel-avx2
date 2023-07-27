@@ -15,8 +15,10 @@ using the provided `CMakeLists.txt`.
 
 To generate the Makefile, create `/ref/build` and run cmake in the directory
 
-`mkdir -p ./ref/build`
-`cd ./ref/build && cmake ..`
+```shell
+mkdir -p ./ref/build
+cd ./ref/build && cmake ..
+```
 
 We provide three programs:
 `test` to run at test of key generation, signing, and verification,
@@ -38,8 +40,6 @@ and the KAT test using
 The default parameter set is the `toy` parameter set. Another parameter set can be selected using different targets, e.g.:
 
 `make RUN_MEDS9923`.
-`make BENCH_MEDS9923`.
-`make KAT_MEDS9923`.
 
 A list of available parameter sets can be obtained by:
 
