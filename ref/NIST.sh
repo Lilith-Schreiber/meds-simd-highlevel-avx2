@@ -3,24 +3,26 @@
 for p in `./params.py -l`; do
   v=Reference_Implementation
 
-  mkdir -p MEDS/$v/$p
+  mkdir -p MEDS/$v/$p/src
+  mkdir -p MEDS/$v/$p/include
 
-  cp *.c MEDS/$v/$p/
-  cp *.h MEDS/$v/$p/
+  cp src/*.c MEDS/$v/$p/src
+  cp include/*.h MEDS/$v/$p/include
 
-  rm MEDS/$v/$p/randombytes.*
-  rm MEDS/$v/$p/KAT_test.c
+  rm MEDS/$v/$p/src/randombytes.c
+  rm MEDS/$v/$p/src/KAT_test.c
+  rm MEDS/$v/$p/include/randombytes.h
 
-  cp NIST/PQCgenKAT_sign.c MEDS/$v/$p/PQCgenKAT_sign.c
-  cp NIST/rng.c MEDS/$v/$p/randombytes.c
-  cp NIST/rng.h MEDS/$v/$p/randombytes.h
-  cp NIST/rng.h MEDS/$v/$p/rng.h
+  cp src/NIST/PQCgenKAT_sign.c MEDS/$v/$p/src/PQCgenKAT_sign.c
+  cp src/NIST/rng.c MEDS/$v/$p/src/randombytes.c
+  cp include/NIST/rng.h MEDS/$v/$p/include/randombytes.h
+  cp include/NIST/rng.h MEDS/$v/$p/include/rng.h
 
-  ./params.py -p $p > MEDS/$v/$p/params.h
+  ./params.py -p $p > MEDS/$v/$p/include/params.h
 
-  ./params.py -a $p > MEDS/$v/$p/api.h
+  ./params.py -a $p > MEDS/$v/$p/include/api.h
 
-  cp NIST.mk MEDS/$v/$p/Makefile
+  cp NIST.cmk MEDS/$v/$p/CMakeLists.txt
 done
 
 ln -s $v MEDS/Optimized_Implementation

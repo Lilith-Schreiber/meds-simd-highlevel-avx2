@@ -1,0 +1,103 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(MEDS_simd)
+
+find_package(OpenSSL REQUIRED)
+
+option(DEBUG "Build with debug flags" OFF)
+if(DEBUG)
+  message(STATUS "Building with debug flags")
+  set(CMAKE_C_FLAGS "-g -Wall -mavx512f")
+  add_compile_definitions(DEBUG)
+else()
+  message(STATUS "Building with release flags")
+  set(CMAKE_C_FLAGS "-O3 -Wall -mavx512f")
+endif()
+
+# set(CMAKE_VERBOSE_MAKEFILE ON)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+set(PROJECT_SOURCE_DIR ${CMAKE_SOURCE_DIR}/src)
+set(PROJECT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
+
+set(LIBS
+    bitstream
+    fips202
+    matrixmod
+    measure
+    meds
+    randombytes
+    seed
+    util
+    vec)
+
+# ##############################################################################
+# Build libraries
+# ##############################################################################
+
+set(LIBRARIES)
+
+foreach(lib ${LIBS})
+  set(LIBRARY ${lib})
+
+  add_library(${LIBRARY} STATIC ${PROJECT_SOURCE_DIR}/${lib}.c)
+  target_include_directories(${LIBRARY} PRIVATE ${PROJECT_INCLUDE_DIR})
+  target_compile_definitions(${LIBRARY} PRIVATE ${param})
+
+  list(APPEND LIBRARIES ${LIBRARY})
+endforeach()
+
+target_link_libraries(matrixmod vec)
+target_link_libraries(
+  meds
+  bitstream
+  matrixmod
+  measure
+  randombytes
+  seed
+  util
+  vec)
+target_link_libraries(seed fips202)
+target_link_libraries(util matrixmod measure fips202 vec)
+target_link_libraries(randombytes ${OPENSSL_LIBRARIES})
+target_link_libraries(vec matrixmod)
+
+# ##############################################################################
+# Build test
+# ##############################################################################
+
+add_executable(test ${PROJECT_SOURCE_DIR}/test.c)
+target_include_directories(test PRIVATE ${PROJECT_INCLUDE_DIR})
+target_link_libraries(test ${LIBRARIES})
+
+add_custom_target(
+  TEST
+  COMMAND ./test
+  DEPENDS test)
+
+# ##############################################################################
+# Build KAT_test
+# ##############################################################################
+
+add_executable(PQCgenKAT_sign ${PROJECT_SOURCE_DIR}/PQCgenKAT_sign.c)
+target_include_directories(PQCgenKAT_sign PRIVATE ${PROJECT_INCLUDE_DIR})
+target_link_libraries(PQCgenKAT_sign ${LIBRARIES})
+
+add_custom_target(
+  KAT
+  COMMAND ./PQCgenKAT_sign
+  DEPENDS PQCgenKAT_sign)
+
+# ##############################################################################
+# Build bench
+# ##############################################################################
+
+add_executable(bench ${PROJECT_SOURCE_DIR}/bench.c)
+target_include_directories(bench PRIVATE ${PROJECT_INCLUDE_DIR})
+target_link_libraries(bench ${LIBRARIES})
+
+add_custom_target(
+  BENCH
+  COMMAND ./bench
+  DEPENDS bench)
