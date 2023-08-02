@@ -21,6 +21,8 @@ int parse_hash(uint8_t *digest, int digest_len, uint8_t *h, int len_h);
 
 int solve(pmod_mat_t *A, pmod_mat_t *B_inv, pmod_mat_t *G0prime, GFq_t Amm);
 
+pmod_vec_mask_t solve_vec(pmod_vec_t *A, pmod_vec_t *B_inv, pmod_vec_t *G0prime, pmod_vec_t Amm);
+
 void pi(pmod_mat_t *Gout, pmod_mat_t *A, pmod_mat_t *B, pmod_mat_t *G);
 
 void pi_vec(pmod_vec_t *Go, pmod_vec_t *A, pmod_vec_t *B, pmod_vec_t *G0);

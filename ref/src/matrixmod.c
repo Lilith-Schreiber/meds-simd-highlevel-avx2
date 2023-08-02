@@ -92,191 +92,90 @@ int pmod_mat_syst_ct(pmod_mat_t *M, int M_r, int M_c) {
   return pmod_mat_back_substitution_ct(M, M_r, M_c);
 }
 
-void pmod_mat_back_substitution_ct_vec(pmod_vec_t *M, int M_r, int M_c) {
-  const pmod_vec_t zero = SET1(0);
-  const pmod_vec_t p = SET1(MEDS_p);
-
-  for (int r = M_r - 1; r >= 0; r--)
-    for (int r2 = 0; r2 < r; r2++) {
-      pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
-
-      pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
-      pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
-
-      pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
-
-      val = SUB(tmp1, val);
-      // val = SUB(tmp1, factor);
-      val = ADD_M(val, p, LT(val, zero));
-
-      pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
-
-      for (int c = M_r; c < M_c; c++) {
-        pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
-        pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
-
-        pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
-
-        val = SUB(tmp1, val);
-        val = ADD_M(val, p, LT(val, zero));
-
-        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
-      }
-    }
-}
-
-void pmod_mat_back_substitution_ct_vec_inv(pmod_vec_t *M, pmod_vec_t *M_inv,
-                                           int M_r, int M_c) {
-  const pmod_vec_t zero = SET1(0);
-  const pmod_vec_t p = SET1(MEDS_p);
-  // printf("Back\n");
-
-  for (int r = M_r - 1; r >= 0; r--)
-    for (int r2 = 0; r2 < r; r2++) {
-      pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
-
-      pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
-      pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
-      pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
-      val = SUB(tmp1, val);
-      val = ADD_M(val, p, LT(val, zero));
-      pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
-      for (int c = 0; c < M_r; c++) {
-        tmp0 = pmod_mat_entry(M_inv, M_r, M_r, r, c);
-        tmp1 = pmod_mat_entry(M_inv, M_r, M_r, r2, c);
-        val = GF_reduc_vec(MULLO(tmp0, factor));
-        val = SUB(tmp1, val);
-        val = ADD_M(val, p, LT(val, zero));
-        pmod_mat_set_entry(M_inv, M_r, M_r, r2, c, val);
-      }
-    }
-}
-
-pmod_vec_mask_t pmod_mat_syst_ct_vec_inv(pmod_vec_t *M, int M_r, int M_c) {
-  const pmod_vec_t zero = SET1(0);
-  const pmod_vec_t one = SET1(1);
-  const pmod_vec_t p = SET1(MEDS_p);
-
-  pmod_vec_t M_inv[M_r * M_r];
-  for (int i = 0; i < M_r; i++)
-    for (int j = 0; j < M_r; j++)
-      pmod_mat_set_entry(M_inv, M_r, M_r, i, j, zero);
-  for (int i = 0; i < M_r; i++) pmod_mat_set_entry(M_inv, M_r, M_r, i, i, one);
-
-  __mmask16 valid = 0xFFFF;
-
-  for (int r = 0; r < M_r; r++) {
-    for (int r2 = r + 1; r2 < M_r; r2++) {
-      pmod_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
-      __mmask16 Mrr_eq_zero = EQ(Mrr, zero);
-
-      for (int c = r; c < M_r; c++) {
-        pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
-        pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
-        pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
-        res = SUB_M(res, p, GE(res, p));
-        pmod_mat_set_entry(M, M_r, M_c, r, c, res);
-      }
-      for (int c = 0; c < M_r; c++) {
-        pmod_vec_t val = pmod_mat_entry(M_inv, M_r, M_r, r2, c);
-        pmod_vec_t Mrc = pmod_mat_entry(M_inv, M_r, M_r, r, c);
-        pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
-        res = SUB_M(res, p, GE(res, p));
-        pmod_mat_set_entry(M_inv, M_r, M_r, r, c, res);
-      }
-    }
-
-    pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r, r);
-    __mmask16 val_neq_zero = NEQ(val, zero);
-    valid = valid & val_neq_zero;
-
-    val = GF_inv_vec(val);
-    for (int c = r; c < M_r; c++) {
-      pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
-      pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
-      pmod_mat_set_entry(M, M_r, M_c, r, c, res);
-    }
-    for (int c = 0; c < M_r; c++) {
-      pmod_vec_t Mrc = pmod_mat_entry(M_inv, M_r, M_r, r, c);
-      pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
-      pmod_mat_set_entry(M_inv, M_r, M_r, r, c, res);
-    }
-
-    for (int r2 = r + 1; r2 < M_r; r2++) {
-      pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
-
-      for (int c = r; c < M_r; c++) {
-        pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
-        pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
-        pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
-        val = SUB(tmp1, val);
-        val = ADD_M(val, p, LT(val, zero));
-        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
-      }
-      for (int c = 0; c < M_r; c++) {
-        pmod_vec_t tmp0 = pmod_mat_entry(M_inv, M_r, M_r, r, c);
-        pmod_vec_t tmp1 = pmod_mat_entry(M_inv, M_r, M_r, r2, c);
-        val = GF_reduc_vec(MULLO(tmp0, factor));
-        val = SUB(tmp1, val);
-        val = ADD_M(val, p, LT(val, zero));
-        pmod_mat_set_entry(M_inv, M_r, M_r, r2, c, val);
-      }
-    }
-  }
-
-  pmod_mat_back_substitution_ct_vec_inv(M, M_inv, M_r, M_c);
-  pmod_mat_mask_mul_vec(M, M_r, M_c, M_inv, M_r, M_r, M, M_r, M_c, M_r);
-
-  return valid;
-}
+// void pmod_mat_back_substitution_ct_vec(pmod_vec_t *M, int M_r, int M_c) {
+//   const pmod_vec_t zero = SET1(0);
+//   const pmod_vec_t p = SET1(MEDS_p);
+//
+//   for (int r = M_r - 1; r >= 0; r--)
+//     for (int r2 = 0; r2 < r; r2++) {
+//       pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+//
+//       pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, r);
+//       pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, r);
+//
+//       pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+//
+//       val = SUB(tmp1, val);
+//       // val = SUB(tmp1, factor);
+//       val = ADD_M(val, p, LT(val, zero));
+//
+//       pmod_mat_set_entry(M, M_r, M_c, r2, r, val);
+//
+//       for (int c = M_r; c < M_c; c++) {
+//         pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+//         pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+//
+//         pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+//
+//         val = SUB(tmp1, val);
+//         val = ADD_M(val, p, LT(val, zero));
+//
+//         pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+//       }
+//     }
+// }
 
 pmod_vec_mask_t pmod_mat_syst_ct_vec(pmod_vec_t *M, int M_r, int M_c) {
-  const pmod_vec_t zero = SET1(0);
-  const pmod_vec_t p = SET1(MEDS_p);
+  // const pmod_vec_t zero = SET1(0);
+  // const pmod_vec_t p = SET1(MEDS_p);
+  //
+  // __mmask16 valid = 0xFFFF;
+  //
+  // for (int r = 0; r < M_r; r++) {
+  //   for (int r2 = r + 1; r2 < M_r; r2++) {
+  //     pmod_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
+  //     __mmask16 Mrr_eq_zero = EQ(Mrr, zero);
+  //
+  //     for (int c = r; c < M_c; c++) {
+  //       pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
+  //
+  //       pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+  //       pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
+  //       res = SUB_M(res, p, GE(res, p));
+  //       pmod_mat_set_entry(M, M_r, M_c, r, c, res);
+  //     }
+  //   }
+  //
+  //   pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r, r);
+  //   __mmask16 val_neq_zero = NEQ(val, zero);
+  //   valid = valid & val_neq_zero;
+  //
+  //   val = GF_inv_vec(val);
+  //   for (int c = r; c < M_c; c++) {
+  //     pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
+  //     pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
+  //     pmod_mat_set_entry(M, M_r, M_c, r, c, res);
+  //   }
+  //
+  //   for (int r2 = r + 1; r2 < M_r; r2++) {
+  //     pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
+  //
+  //     for (int c = r; c < M_c; c++) {
+  //       pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
+  //       pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
+  //       pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+  //       val = SUB(tmp1, val);
+  //       val = ADD_M(val, p, LT(val, zero));
+  //       pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
+  //     }
+  //   }
+  // }
+  //
+  // pmod_mat_back_substitution_ct_vec(M, M_r, M_c);
 
-  __mmask16 valid = 0xFFFF;
-
-  for (int r = 0; r < M_r; r++) {
-    for (int r2 = r + 1; r2 < M_r; r2++) {
-      pmod_vec_t Mrr = pmod_mat_entry(M, M_r, M_c, r, r);
-      __mmask16 Mrr_eq_zero = EQ(Mrr, zero);
-
-      for (int c = r; c < M_c; c++) {
-        pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r2, c);
-
-        pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
-        pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
-        res = SUB_M(res, p, GE(res, p));
-        pmod_mat_set_entry(M, M_r, M_c, r, c, res);
-      }
-    }
-
-    pmod_vec_t val = pmod_mat_entry(M, M_r, M_c, r, r);
-    __mmask16 val_neq_zero = NEQ(val, zero);
-    valid = valid & val_neq_zero;
-
-    val = GF_inv_vec(val);
-    for (int c = r; c < M_c; c++) {
-      pmod_vec_t Mrc = pmod_mat_entry(M, M_r, M_c, r, c);
-      pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
-      pmod_mat_set_entry(M, M_r, M_c, r, c, res);
-    }
-
-    for (int r2 = r + 1; r2 < M_r; r2++) {
-      pmod_vec_t factor = pmod_mat_entry(M, M_r, M_c, r2, r);
-
-      for (int c = r; c < M_c; c++) {
-        pmod_vec_t tmp0 = pmod_mat_entry(M, M_r, M_c, r, c);
-        pmod_vec_t tmp1 = pmod_mat_entry(M, M_r, M_c, r2, c);
-        pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
-        val = SUB(tmp1, val);
-        val = ADD_M(val, p, LT(val, zero));
-        pmod_mat_set_entry(M, M_r, M_c, r2, c, val);
-      }
-    }
-  }
-
-  pmod_mat_back_substitution_ct_vec(M, M_r, M_c);
+  pmod_vec_t M_inv[M_r * M_r];
+  pmod_vec_mask_t valid = pmod_mat_inv_vec(M_inv, M, M_r, M_c);
+  pmod_mat_mask_mul_vec(M, M_r, M_c, M_inv, M_r, M_r, M, M_r, M_c, M_r);
 
   return valid;
 }
@@ -404,6 +303,105 @@ GFq_t GF_inv(GFq_t val) {
 
     return t;
   }
+}
+
+pmod_vec_mask_t pmod_mat_inv_vec(pmod_vec_t *M_inv, pmod_vec_t *M, int M_r, int M_c) {
+  const pmod_vec_t zero = SET1(0);
+  const pmod_vec_t one = SET1(1);
+  const pmod_vec_t p = SET1(MEDS_p);
+
+  pmod_vec_t M_prime[M_r * M_r];
+  for (int r = 0; r < M_r; r++)
+    memcpy(M_prime + r * M_r, M + r * M_c, sizeof(pmod_vec_t) * M_r);
+
+  for (int i = 0; i < M_r; i++)
+    for (int j = 0; j < M_r; j++)
+      pmod_mat_set_entry(M_inv, M_r, M_r, i, j, zero);
+  for (int i = 0; i < M_r; i++) pmod_mat_set_entry(M_inv, M_r, M_r, i, i, one);
+
+  __mmask16 valid = 0xFFFF;
+
+  for (int r = 0; r < M_r; r++) {
+    for (int r2 = r + 1; r2 < M_r; r2++) {
+      pmod_vec_t Mrr = pmod_mat_entry(M_prime, M_r, M_r, r, r);
+      __mmask16 Mrr_eq_zero = EQ(Mrr, zero);
+
+      for (int c = r; c < M_r; c++) {
+        pmod_vec_t val = pmod_mat_entry(M_prime, M_r, M_r, r2, c);
+        pmod_vec_t Mrc = pmod_mat_entry(M_prime, M_r, M_r, r, c);
+        pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
+        res = SUB_M(res, p, GE(res, p));
+        pmod_mat_set_entry(M_prime, M_r, M_r, r, c, res);
+      }
+      for (int c = 0; c < M_r; c++) {
+        pmod_vec_t val = pmod_mat_entry(M_inv, M_r, M_r, r2, c);
+        pmod_vec_t Mrc = pmod_mat_entry(M_inv, M_r, M_r, r, c);
+        pmod_vec_t res = ADD_M(Mrc, val, Mrr_eq_zero);
+        res = SUB_M(res, p, GE(res, p));
+        pmod_mat_set_entry(M_inv, M_r, M_r, r, c, res);
+      }
+    }
+
+    pmod_vec_t val = pmod_mat_entry(M_prime, M_r, M_r, r, r);
+    __mmask16 val_neq_zero = NEQ(val, zero);
+    valid = valid & val_neq_zero;
+
+    val = GF_inv_vec(val);
+    for (int c = r; c < M_r; c++) {
+      pmod_vec_t Mrc = pmod_mat_entry(M_prime, M_r, M_r, r, c);
+      pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
+      pmod_mat_set_entry(M_prime, M_r, M_r, r, c, res);
+    }
+    for (int c = 0; c < M_r; c++) {
+      pmod_vec_t Mrc = pmod_mat_entry(M_inv, M_r, M_r, r, c);
+      pmod_vec_t res = GF_reduc_vec(MULLO(Mrc, val));
+      pmod_mat_set_entry(M_inv, M_r, M_r, r, c, res);
+    }
+
+    for (int r2 = r + 1; r2 < M_r; r2++) {
+      pmod_vec_t factor = pmod_mat_entry(M_prime, M_r, M_r, r2, r);
+
+      for (int c = r; c < M_r; c++) {
+        pmod_vec_t tmp0 = pmod_mat_entry(M_prime, M_r, M_r, r, c);
+        pmod_vec_t tmp1 = pmod_mat_entry(M_prime, M_r, M_r, r2, c);
+        pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+        val = SUB(tmp1, val);
+        val = ADD_M(val, p, LT(val, zero));
+        pmod_mat_set_entry(M_prime, M_r, M_r, r2, c, val);
+      }
+      for (int c = 0; c < M_r; c++) {
+        pmod_vec_t tmp0 = pmod_mat_entry(M_inv, M_r, M_r, r, c);
+        pmod_vec_t tmp1 = pmod_mat_entry(M_inv, M_r, M_r, r2, c);
+        val = GF_reduc_vec(MULLO(tmp0, factor));
+        val = SUB(tmp1, val);
+        val = ADD_M(val, p, LT(val, zero));
+        pmod_mat_set_entry(M_inv, M_r, M_r, r2, c, val);
+      }
+    }
+  }
+
+  // back substitution
+  for (int r = M_r - 1; r >= 0; r--)
+    for (int r2 = 0; r2 < r; r2++) {
+      pmod_vec_t factor = pmod_mat_entry(M_prime, M_r, M_r, r2, r);
+
+      pmod_vec_t tmp0 = pmod_mat_entry(M_prime, M_r, M_r, r, r);
+      pmod_vec_t tmp1 = pmod_mat_entry(M_prime, M_r, M_r, r2, r);
+      pmod_vec_t val = GF_reduc_vec(MULLO(tmp0, factor));
+      val = SUB(tmp1, val);
+      val = ADD_M(val, p, LT(val, zero));
+      pmod_mat_set_entry(M_prime, M_r, M_r, r2, r, val);
+      for (int c = 0; c < M_r; c++) {
+        tmp0 = pmod_mat_entry(M_inv, M_r, M_r, r, c);
+        tmp1 = pmod_mat_entry(M_inv, M_r, M_r, r2, c);
+        val = GF_reduc_vec(MULLO(tmp0, factor));
+        val = SUB(tmp1, val);
+        val = ADD_M(val, p, LT(val, zero));
+        pmod_mat_set_entry(M_inv, M_r, M_r, r2, c, val);
+      }
+    }
+
+  return valid;
 }
 
 int pmod_mat_inv(pmod_mat_t *B, pmod_mat_t *A, int A_r, int A_c) {

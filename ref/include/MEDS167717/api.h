@@ -12,6 +12,11 @@ int crypto_sign_keypair(
     unsigned char *sk
   );
 
+int crypto_sign_keypair_vec(
+    unsigned char *pk,
+    unsigned char *sk
+  );
+
 int crypto_sign(
     unsigned char *sm, unsigned long long *smlen,
     const unsigned char *m, unsigned long long mlen,

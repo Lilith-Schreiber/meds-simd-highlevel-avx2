@@ -15,11 +15,11 @@ pmod_vec_t pmod_mat_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c) {
 }
 
 void pmod_mat_set_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c,
-                            pmod_vec_t val) {
+                            pmod_vec_t val, int num) {
   uint32_t buf[16] align64 = {0};
   STORE((int *)buf, val);
 
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < num; i++) {
     const pmod_mat_t entry = buf[i];
     pmod_mat_set_entry(M[i], M_r, M_c, r, c, entry);
     // pmod_mat_set_entry(M[i], M_r, M_c, r, c, entry % MEDS_p);
@@ -49,7 +49,11 @@ int pmod_mask_count(pmod_vec_mask_t mask) {
   return __builtin_popcount(((int)mask) & 0xffff);
 }
 
-uint32_t extract_vec(__m512i x, int pos) { return *((uint32_t *)&x + pos); }
+uint32_t extract_vec(__m512i x, int pos) {  
+  uint32_t buf[16] align64;
+  STORE(buf, x);
+  return buf[pos];
+}
 
 uint32_t extract_mask(__mmask16 x, int pos) { return ((uint32_t)x) & (1 << pos); }
 // uint32_t extract_vec(__m512i x, int pos) {

@@ -2,15 +2,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "randombytes.h"
-
 #include "api.h"
+#include "measure.h"
 #include "meds.h"
 #include "params.h"
+#include "randombytes.h"
 
-#include "measure.h"
+extern FILE *measure_log;
+const char *measure_log_file = "./measure.txt";
 
 int main(int argc, char *argv[]) {
+  clear_measure_log(measure_log_file);
+
   printf("paramter set: %s\n\n", MEDS_name);
 
   long long time = 0;
@@ -41,6 +44,12 @@ int main(int argc, char *argv[]) {
     time = -cpucycles();
     crypto_sign_keypair(pk, sk);
     time += cpucycles();
+    printf("keypair (normal): %llu\n", time);
+
+    time = -cpucycles();
+    crypto_sign_keypair_vec(pk, sk);
+    time += cpucycles();
+    printf("keypair   (SIMD): %llu\n", time);
 
     if (time < keygen_time)
       keygen_time = time;
@@ -51,12 +60,12 @@ int main(int argc, char *argv[]) {
     time = -cpucycles();
     crypto_sign(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += cpucycles();
-    printf("sign (normal): %llu\n", time);
+    printf("   sign (normal): %llu\n", time);
 
     time = -cpucycles();
     crypto_sign_vec(sig, &sig_len, (const unsigned char *)msg, sizeof(msg), sk);
     time += cpucycles();
-    printf("sign   (SIMD): %llu\n", time);
+    printf("   sign   (SIMD): %llu\n", time);
 
     if (time < sign_time)
       sign_time = time;
@@ -69,12 +78,12 @@ int main(int argc, char *argv[]) {
     time = -cpucycles();
     ret = crypto_sign_open(msg_out, &msg_out_len, sig, sizeof(sig), pk);
     time += cpucycles();
-    printf("verify (normal): %llu\n", time);
+    printf(" verify (normal): %llu\n", time);
 
     time = -cpucycles();
     ret = crypto_sign_open_vec(msg_out, &msg_out_len, sig, sizeof(sig), pk);
     time += cpucycles();
-    printf("verify   (SIMD): %llu\n", time);
+    printf(" verify   (SIMD): %llu\n", time);
 
     if (time < verify_time)
       verify_time = time;

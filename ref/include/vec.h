@@ -6,6 +6,10 @@
 
 #include "params.h"
 
+#define align16 __attribute__((aligned(16)))
+#define align32 __attribute__((aligned(32)))
+#define align64 __attribute__((aligned(64)))
+
 #define ADD(a, b) _mm512_add_epi32(a, b)
 #define ADD_M(a, b, m) _mm512_mask_add_epi32(a, m, a, b)
 #define SUB(a, b) _mm512_sub_epi32(a, b)
@@ -17,9 +21,10 @@
 
 #define GT(a, b) _mm512_cmpgt_epi32_mask(a, b)
 #define GE(a, b) _mm512_cmpge_epi32_mask(a, b)
+#define LT(a, b) _mm512_cmplt_epi32_mask(a, b)
+#define LE(a, b) _mm512_cmple_epi32_mask(a, b)
 #define EQ(a, b) _mm512_cmpeq_epi32_mask(a, b)
 #define NEQ(a, b) _mm512_cmpneq_epi32_mask(a, b)
-#define LT(a, b) _mm512_cmplt_epi32_mask(a, b)
 
 #define SET1(a) _mm512_set1_epi32(a)
 #define LOAD(a) _mm512_load_epi32(a)
@@ -30,7 +35,7 @@
 
 pmod_vec_t pmod_mat_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c);
 void pmod_mat_set_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c,
-                             pmod_vec_t val);
+                             pmod_vec_t val, int num);
 
 int pmod_mask_count(pmod_vec_mask_t mask);
 

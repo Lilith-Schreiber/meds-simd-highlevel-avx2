@@ -35,6 +35,7 @@ protection within the United States.
 
 #include "api.h"
 #include "rng.h"
+#include "measure.h"
 
 #define MAX_MARKER_LEN 50
 
@@ -49,7 +50,12 @@ void fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
 
 char AlgName[] = "My Alg Name";
 
+extern FILE *measure_log;
+const char *measure_log_file = "./measure.txt";
+
 int main() {
+  clear_measure_log(measure_log_file);
+
   char fn_req[32], fn_rsp[32];
   FILE *fp_req, *fp_rsp;
   unsigned char seed[48];
@@ -104,7 +110,10 @@ int main() {
 
   fprintf(fp_rsp, "# %s\n\n", CRYPTO_ALGNAME);
   done = 0;
+  int round = 0;
   do {
+    // printf("%d\n", round);
+    round++;
     if (FindMarker(fp_req, "count = "))
       (void)!fscanf(fp_req, "%d", &count);
     else {
@@ -139,8 +148,11 @@ int main() {
     }
     fprintBstr(fp_rsp, "msg = ", m, mlen);
 
+    // if (round != 42) continue;
+
     // Generate the public/private keypair
-    if ((ret_val = crypto_sign_keypair(pk, sk)) != 0) {
+    // if ((ret_val = crypto_sign_keypair(pk, sk)) != 0) {
+    if ((ret_val = crypto_sign_keypair_vec(pk, sk)) != 0) {
       printf("crypto_sign_keypair returned <%d>\n", ret_val);
       return KAT_CRYPTO_FAILURE;
     }
@@ -156,8 +168,8 @@ int main() {
     fprintBstr(fp_rsp, "sm = ", sm, smlen);
     fprintf(fp_rsp, "\n");
 
-    if ((ret_val = crypto_sign_open_vec(m1, &mlen1, sm, smlen, pk)) != 0) {
     // if ((ret_val = crypto_sign_open(m1, &mlen1, sm, smlen, pk)) != 0) {
+    if ((ret_val = crypto_sign_open_vec(m1, &mlen1, sm, smlen, pk)) != 0) {
       printf("crypto_sign_open returned <%d>\n", ret_val);
       return KAT_CRYPTO_FAILURE;
     }
@@ -177,8 +189,6 @@ int main() {
     free(m);
     free(m1);
     free(sm);
-
-    // break;
 
   } while (!done);
 
