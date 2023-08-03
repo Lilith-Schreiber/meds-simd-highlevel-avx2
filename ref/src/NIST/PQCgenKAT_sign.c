@@ -50,11 +50,14 @@ void fprintBstr(FILE *fp, char *S, unsigned char *A, unsigned long long L);
 
 char AlgName[] = "My Alg Name";
 
-extern FILE *measure_log;
+#ifdef LOG_MEASURE
 const char *measure_log_file = "./measure.txt";
+#endif
 
 int main() {
-  clear_measure_log(measure_log_file);
+#ifdef LOG_MEASURE
+  open_measure_log(measure_log_file);
+#endif
 
   char fn_req[32], fn_rsp[32];
   FILE *fp_req, *fp_rsp;
@@ -110,10 +113,10 @@ int main() {
 
   fprintf(fp_rsp, "# %s\n\n", CRYPTO_ALGNAME);
   done = 0;
-  int round = 0;
+  // int round = 0;
   do {
-    printf("%d\n", round);
-    round++;
+    // printf("%d\n", round);
+    // round++;
     if (FindMarker(fp_req, "count = "))
       (void)!fscanf(fp_req, "%d", &count);
     else {
@@ -148,8 +151,6 @@ int main() {
     }
     fprintBstr(fp_rsp, "msg = ", m, mlen);
 
-    // if (round != 42) continue;
-
     // Generate the public/private keypair
     // if ((ret_val = crypto_sign_keypair(pk, sk)) != 0) {
     if ((ret_val = crypto_sign_keypair_vec(pk, sk)) != 0) {
@@ -159,8 +160,6 @@ int main() {
     fprintBstr(fp_rsp, "pk = ", pk, CRYPTO_PUBLICKEYBYTES);
     fprintBstr(fp_rsp, "sk = ", sk, CRYPTO_SECRETKEYBYTES);
 
-    // break;
-
     // if ((ret_val = crypto_sign(sm, &smlen, m, mlen, sk)) != 0) {
     if ((ret_val = crypto_sign_vec(sm, &smlen, m, mlen, sk)) != 0) {
       printf("crypto_sign returned <%d>\n", ret_val);
@@ -169,8 +168,6 @@ int main() {
     fprintf(fp_rsp, "smlen = %llu\n", smlen);
     fprintBstr(fp_rsp, "sm = ", sm, smlen);
     fprintf(fp_rsp, "\n");
-
-    // break;
 
     // if ((ret_val = crypto_sign_open(m1, &mlen1, sm, smlen, pk)) != 0) {
     if ((ret_val = crypto_sign_open_vec(m1, &mlen1, sm, smlen, pk)) != 0) {
@@ -198,6 +195,10 @@ int main() {
 
   fclose(fp_req);
   fclose(fp_rsp);
+
+#ifdef LOG_MEASURE
+  close_measure_log();
+#endif
 
   return KAT_SUCCESS;
 }

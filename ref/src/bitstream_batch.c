@@ -21,8 +21,6 @@ int bs_batch_finalize(bitstream_batch_t *bs) {
   return bs->byte_pos - 1;
 }
 
-// int bs_batch_write(bitstream_batch_t *bs, uint16_t **data, uint32_t pos,
-//                    uint32_t data_len) {
 int bs_batch_write(bitstream_batch_t *bs, uint32_t *data, uint32_t data_len) {
   if (bs->byte_pos * 8 + bs->bit_pos + data_len > bs->buf_len * 8) {
     fprintf(stderr, "ERROR: bistream - write esceeds buffer!\n");
@@ -31,7 +29,6 @@ int bs_batch_write(bitstream_batch_t *bs, uint32_t *data, uint32_t data_len) {
 
   if (bs->bit_pos + data_len < 8) {
     for (int i = 0; i < bs->batch_size; i++)
-      // bs->data[i][bs->byte_pos] |= data[i][pos] << bs->bit_pos;
       bs->data[i][bs->byte_pos] |= data[i] << bs->bit_pos;
 
     bs->bit_pos += data_len;
@@ -46,8 +43,6 @@ int bs_batch_write(bitstream_batch_t *bs, uint32_t *data, uint32_t data_len) {
 
   if (bs->bit_pos > 0) {
     for (int i = 0; i < bs->batch_size; i++) {
-      // bs->data[i][bs->byte_pos] |= (data[i][pos] << bs->bit_pos) & 0xFF;
-      // data[i][pos] >>= 8 - bs->bit_pos;
       bs->data[i][bs->byte_pos] |= (data[i] << bs->bit_pos) & 0xFF;
       data[i] >>= 8 - bs->bit_pos;
     }
@@ -60,8 +55,6 @@ int bs_batch_write(bitstream_batch_t *bs, uint32_t *data, uint32_t data_len) {
 
   while (data_len >= 8) {
     for (int i = 0; i < bs->batch_size; i++) {
-      // bs->data[i][bs->byte_pos] = data[i][pos] & 0xFF;
-      // data[i][pos] >>= 8;
       bs->data[i][bs->byte_pos] = data[i] & 0xFF;
       data[i] >>= 8;
     }
@@ -73,7 +66,6 @@ int bs_batch_write(bitstream_batch_t *bs, uint32_t *data, uint32_t data_len) {
 
   if (data_len > 0) {
     for (int i = 0; i < bs->batch_size; i++)
-      // bs->data[i][bs->byte_pos] = data[i][pos];
       bs->data[i][bs->byte_pos] = data[i];
 
     bs->bit_pos = data_len;
@@ -87,8 +79,6 @@ int bs_batch_read(bitstream_batch_t *bs, uint32_t *buf, uint32_t data_len) {
     fprintf(stderr, "ERROR: bistream - read esceeds buffer!\n");
     return -1;
   }
-
-  // uint32_t data = 0;
 
   if (bs->bit_pos + data_len < 8) {
     for (int i = 0; i < bs->batch_size; i++)

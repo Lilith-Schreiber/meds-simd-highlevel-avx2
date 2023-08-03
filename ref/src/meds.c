@@ -422,9 +422,6 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
   for (int i = 0; i < MEDS_s; i++) indexes[i] = i;
   for (int i = MEDS_s; i < (MEDS_s << 1); i++) indexes[i] = 0;
 
-  int positions[MEDS_s];
-  for (int i = 0; i < MEDS_s; i++) positions[i] = i;
-
   START(gen_rsp_time);
   while (num_valid < MEDS_s) {
     int batch_size = 0;
@@ -597,7 +594,7 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
   END(serial_time_sum, serial_time);
 
   LOG_M("generate keypairs:\n");
-  LOG_M("  %f   (%llu cycles)\n", gen_rsp_time / freq, gen_rsp_time);
+  LOG_M("  %f   (%llu cycles)\n", gen_rsp_time_sum / freq, gen_rsp_time_sum);
 
   LOG_M("  calculate TG: (simd)\n");
   LOG_M("    %f   (%llu cycles)\n", gen_G0p_time_sum / freq, gen_G0p_time_sum);
@@ -730,7 +727,6 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
       START(solve_time);
       if (solve(A, B_inv[i], G0prime, Amm) < 0) {
         LOG("no sol");
-        printf("no sol: %d\n", i);
         continue;
       }
       END(solve_time_sum, solve_time);
@@ -738,13 +734,11 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
       START(inv_time);
       if (pmod_mat_inv(B, B_inv[i], MEDS_n, MEDS_n) < 0) {
         LOG("no inv B");
-        printf("no B: %d\n", i);
         continue;
       }
 
       if (pmod_mat_inv(A_inv[i], A, MEDS_m, MEDS_m) < 0) {
         LOG("no inv A_inv");
-        printf("no A_inv: %d\n", i);
         continue;
       }
       END(inv_time_sum, inv_time);
@@ -761,7 +755,6 @@ int crypto_sign_keypair(unsigned char *pk, unsigned char *sk) {
       START(syst_time);
       if (pmod_mat_syst_ct(G[i], MEDS_k, MEDS_m * MEDS_n) != 0) {
         LOG("redo G[%i]", i);
-        printf("no syst form: %d\n", i);
         continue;  // Not systematic; try again for index i.
       }
       END(syst_time_sum, syst_time);
@@ -1246,8 +1239,6 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   /**
     Load secred keypairs
     **/
-  START(load_secred_time);
-
   uint8_t delta[MEDS_sec_seed_bytes];
 
   randombytes(delta, MEDS_sec_seed_bytes);
@@ -1331,7 +1322,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   long long syst_time_sum = 0;
   long long vectorize_time_sum = 0;
   long long scalarize_time_sum = 0;
-  long long vectorize_G0_time_sum = 0;
+  // long long vectorize_G0_time_sum = 0;
   long long serial_time_sum = 0;
   long long shake_time_sum = 0;
   long long calc_mu_nu_time_sum = 0;
@@ -1359,9 +1350,9 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   pmod_vec_t G_vec[MEDS_k * MEDS_m * MEDS_n];
   pmod_vec_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
 
-  START(vectorize_G0_time);
+  // START(vectorize_G0_time);
   for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1(G_0[i]);
-  END(vectorize_G0_time_sum, vectorize_G0_time);
+  // END(vectorize_G0_time_sum, vectorize_G0_time);
 
   pmod_vec_t A_vec[MEDS_m * MEDS_m];
   pmod_vec_t B_vec[MEDS_n * MEDS_n];

@@ -195,15 +195,8 @@ foreach(param ${PARAMS})
 
 endforeach()
 
-add_custom_target(
-  RUN_ALL
-  DEPENDS ${RUN_ALL_DEPENDS})
+add_custom_target(RUN_ALL DEPENDS ${RUN_ALL_DEPENDS})
 
-add_custom_target(
-  KAT_ALL
-  DEPENDS ${KAT_ALL_DEPENDS})
+add_custom_target(KAT_ALL DEPENDS ${KAT_ALL_DEPENDS})
 
-add_custom_target(
-  BENCH_ALL
-  DEPENDS ${BENCH_ALL_DEPENDS})
-
+add_custom_target(BENCH_ALL DEPENDS ${BENCH_ALL_DEPENDS})

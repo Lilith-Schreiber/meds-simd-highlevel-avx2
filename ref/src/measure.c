@@ -17,11 +17,11 @@ void close_measure_log() {
   }
 }
 
-void clear_measure_log(const char *log_file) {
-  measure_log = fopen(log_file, "w");
-  fprintf(measure_log, "");
-  close_measure_log();
-}
+// void clear_measure_log(const char *log_file) {
+//   measure_log = fopen(log_file, "w");
+//   fprintf(measure_log, "");
+//   close_measure_log();
+// }
 
 long long cpucycles(void) {
   unsigned long long result;

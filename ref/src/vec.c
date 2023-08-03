@@ -22,7 +22,6 @@ void pmod_mat_set_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c,
   for (int i = 0; i < num; i++) {
     const pmod_mat_t entry = buf[i];
     pmod_mat_set_entry(M[i], M_r, M_c, r, c, entry);
-    // pmod_mat_set_entry(M[i], M_r, M_c, r, c, entry % MEDS_p);
   }
 }
 
@@ -56,10 +55,6 @@ uint32_t extract_vec(__m512i x, int pos) {
 }
 
 uint32_t extract_mask(__mmask16 x, int pos) { return ((uint32_t)x) & (1 << pos); }
-// uint32_t extract_vec(__m512i x, int pos) {
-//   uint32_t *buf = (uint32_t *)&x;
-//   return buf[pos];
-// }
 
 __m512i GF_reduc_vec(const __m512i u) {
   const __m512i beta_m = SET1((1 << GFq_bits) - 1);
