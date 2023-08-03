@@ -7,7 +7,7 @@
 FILE *measure_log;
 
 void open_measure_log(const char* log_file) {
-  measure_log = fopen(log_file, "a");
+  measure_log = fopen(log_file, "w");
 }
 
 void close_measure_log() {

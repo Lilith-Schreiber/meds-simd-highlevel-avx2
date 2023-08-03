@@ -23,7 +23,7 @@ int bs_batch_finalize(bitstream_batch_t *bs) {
 
 // int bs_batch_write(bitstream_batch_t *bs, uint16_t **data, uint32_t pos,
 //                    uint32_t data_len) {
-int bs_batch_write(bitstream_batch_t *bs, uint16_t *data, uint32_t data_len) {
+int bs_batch_write(bitstream_batch_t *bs, uint32_t *data, uint32_t data_len) {
   if (bs->byte_pos * 8 + bs->bit_pos + data_len > bs->buf_len * 8) {
     fprintf(stderr, "ERROR: bistream - write esceeds buffer!\n");
     return -1;

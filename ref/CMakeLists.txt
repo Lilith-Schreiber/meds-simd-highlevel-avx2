@@ -25,7 +25,7 @@ set(NIST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/NIST)
 
 set(LIBS
     bitstream
-    # bitstream_batch
+    bitstream_batch
     fips202
     matrixmod
     measure
@@ -94,7 +94,7 @@ foreach(param ${PARAMS})
   target_link_libraries(
     meds_${param}
     bitstream_${param}
-    # bitstream_batch_${param}
+    bitstream_batch_${param}
     matrixmod_${param}
     measure_${param}
     randombytes_${param}

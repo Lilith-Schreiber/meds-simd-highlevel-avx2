@@ -8,11 +8,14 @@
 #include "params.h"
 #include "randombytes.h"
 
-extern FILE *measure_log;
+#ifdef LOG_MEASURE
 const char *measure_log_file = "./measure.txt";
+#endif
 
 int main(int argc, char *argv[]) {
-  clear_measure_log(measure_log_file);
+#ifdef LOG_MEASURE
+  open_measure_log(measure_log_file);
+#endif
 
   printf("paramter set: %s\n\n", MEDS_name);
 
@@ -101,6 +104,10 @@ int main(int argc, char *argv[]) {
   printf("keygen: %f   (%llu cycles)\n", keygen_time / freq, keygen_time);
   printf("sign:   %f   (%llu cycles)\n", sign_time / freq, sign_time);
   printf("verify: %f   (%llu cycles)\n", verify_time / freq, verify_time);
+
+#ifdef LOG_MEASURE
+  close_measure_log();
+#endif
 
   return 0;
 }

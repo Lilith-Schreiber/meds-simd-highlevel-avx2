@@ -112,7 +112,7 @@ int main() {
   done = 0;
   int round = 0;
   do {
-    // printf("%d\n", round);
+    printf("%d\n", round);
     round++;
     if (FindMarker(fp_req, "count = "))
       (void)!fscanf(fp_req, "%d", &count);
@@ -159,6 +159,8 @@ int main() {
     fprintBstr(fp_rsp, "pk = ", pk, CRYPTO_PUBLICKEYBYTES);
     fprintBstr(fp_rsp, "sk = ", sk, CRYPTO_SECRETKEYBYTES);
 
+    // break;
+
     // if ((ret_val = crypto_sign(sm, &smlen, m, mlen, sk)) != 0) {
     if ((ret_val = crypto_sign_vec(sm, &smlen, m, mlen, sk)) != 0) {
       printf("crypto_sign returned <%d>\n", ret_val);
@@ -167,6 +169,8 @@ int main() {
     fprintf(fp_rsp, "smlen = %llu\n", smlen);
     fprintBstr(fp_rsp, "sm = ", sm, smlen);
     fprintf(fp_rsp, "\n");
+
+    // break;
 
     // if ((ret_val = crypto_sign_open(m1, &mlen1, sm, smlen, pk)) != 0) {
     if ((ret_val = crypto_sign_open_vec(m1, &mlen1, sm, smlen, pk)) != 0) {
