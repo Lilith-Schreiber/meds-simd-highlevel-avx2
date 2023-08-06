@@ -1,9 +1,5 @@
 #include "measure.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/types.h>
-
 FILE *measure_log;
 
 void open_measure_log(const char* log_file) {
@@ -16,12 +12,6 @@ void close_measure_log() {
     measure_log = NULL;
   }
 }
-
-// void clear_measure_log(const char *log_file) {
-//   measure_log = fopen(log_file, "w");
-//   fprintf(measure_log, "");
-//   close_measure_log();
-// }
 
 long long cpucycles(void) {
   unsigned long long result;

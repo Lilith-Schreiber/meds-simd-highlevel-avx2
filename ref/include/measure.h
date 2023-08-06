@@ -1,7 +1,11 @@
 #ifndef MEASURE_H
 #define MEASURE_H
 
-// #define LOG_MEASURE
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/types.h>
+
+#define LOG_MEASURE
 
 #ifdef LOG_MEASURE
 
@@ -26,6 +30,5 @@ long long cpucycles(void);
 
 void open_measure_log(const char*);
 void close_measure_log();
-// void clear_measure_log(const char *);
 
 #endif

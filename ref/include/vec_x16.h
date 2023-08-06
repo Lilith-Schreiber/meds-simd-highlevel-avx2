@@ -1,10 +1,11 @@
-#ifndef VEC_H
-#define VEC_H
+#ifndef VEC_X16_H
+#define VEC_X16_H
 
 #include <immintrin.h>
 #include <stdint.h>
 
 #include "params.h"
+#include "matrixmod.h"
 
 #define align16 __attribute__((aligned(16)))
 #define align32 __attribute__((aligned(32)))
@@ -30,24 +31,16 @@
 #define LOAD(a) _mm512_load_epi32(a)
 #define STORE(a, b) _mm512_store_epi32(a, b)
 
-#define pmod_vec_t __m512i
+#define pmod_mat_x16_t __m512i
 #define pmod_vec_mask_t __mmask16
-
-pmod_vec_t pmod_mat_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c);
-void pmod_mat_set_entry_vec(uint16_t *M[], int M_r, int M_c, int r, int c,
-                             pmod_vec_t val, int num);
 
 int pmod_mask_count(pmod_vec_mask_t mask);
 
-// uint32_t extract_vec(__m512i x);
-uint32_t extract_vec(__m512i x, int pos);
-uint32_t extract_mask(__mmask16 x, int pos);
+uint32_t extract_vec_x16(__m512i x, int pos);
+uint32_t extract_mask_x16(__mmask16 x, int pos);
 
-void print_256_vec(__m256i a, __m256i mask);
-void print_512_vec(__m512i a);
-
-__m512i GF_reduc_vec(const __m512i u);
-__m512i GF_mod_vec(const __m512i u);
-pmod_vec_t GF_inv_vec(pmod_vec_t x);
+__m512i GF_reduc_x16(const __m512i u);
+__m512i GF_mod_x16(const __m512i u);
+pmod_mat_x16_t GF_inv_x16(pmod_mat_x16_t x);
 
 #endif
