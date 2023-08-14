@@ -1,13 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-
-#include "fips202.h"
-
-#ifndef MEDS_t
-#include "params.h"
-#endif
-
-#include "log.h"
 #include "seed.h"
 
 void print_tree(uint8_t *stree) {

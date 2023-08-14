@@ -1,7 +1,3 @@
-#include <stdio.h>
-#include <stdint.h>
-#include <stddef.h>
-
 #include "bitstream.h"
 
 int bs_init(bitstream_t *bs, uint8_t *buf, size_t buf_len)

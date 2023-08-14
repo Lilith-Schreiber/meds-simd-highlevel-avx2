@@ -1,30 +1,25 @@
 #include "fips202_x8.h"
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include "vec_x8.h"
-
 #define NROUNDS 24
 #define ROL_x8(a, offset) XOR_x8(SLLI_x8(a, offset), SRLI_x8(a, (64 - offset)))
 
-static pmod_vec_x8_t load64_x8(const pmod_vec_x8_t x[8]) {
+static pmod_mat_x8_t load64_x8(const pmod_mat_x8_t x[8]) {
   unsigned int i;
-  pmod_vec_x8_t r = SET1_x8(0);
+  pmod_mat_x8_t r = SET1_x8(0);
 
   for (i = 0; i < 8; i++) r = OR_x8(r, SLLI_x8(x[i], 8 * i));
 
   return r;
 }
 
-static void store64_x8(pmod_vec_x8_t x[8], pmod_vec_x8_t u) {
+static void store64_x8(pmod_mat_x8_t x[8], pmod_mat_x8_t u) {
   unsigned int i;
 
   for (i = 0; i < 8; i++) x[i] = SRLI_x8(u, 8 * i);
 }
 
 /* Keccak round constants */
-static const pmod_vec_x8_t KeccakF_RoundConstants_x8[NROUNDS] = {
+static const pmod_mat_x8_t KeccakF_RoundConstants_x8[NROUNDS] = {
     SET1_CT_x8(0x0000000000000001ULL), SET1_CT_x8(0x0000000000008082ULL),
     SET1_CT_x8(0x800000000000808aULL), SET1_CT_x8(0x8000000080008000ULL),
     SET1_CT_x8(0x000000000000808bULL), SET1_CT_x8(0x0000000080000001ULL),
@@ -38,23 +33,23 @@ static const pmod_vec_x8_t KeccakF_RoundConstants_x8[NROUNDS] = {
     SET1_CT_x8(0x8000000080008081ULL), SET1_CT_x8(0x8000000000008080ULL),
     SET1_CT_x8(0x0000000080000001ULL), SET1_CT_x8(0x8000000080008008ULL)};
 
-static void KeccakF1600_StatePermute_x8(pmod_vec_x8_t state[25]) {
+static void KeccakF1600_StatePermute_x8(pmod_mat_x8_t state[25]) {
   int round;
 
-  static const pmod_vec_x8_t ALL_ONE = SET1_CT_x8(0xFFFFFFFFFFFFFFFFULL);
+  static const pmod_mat_x8_t ALL_ONE = SET1_CT_x8(0xFFFFFFFFFFFFFFFFULL);
 
-  pmod_vec_x8_t Aba, Abe, Abi, Abo, Abu;
-  pmod_vec_x8_t Aga, Age, Agi, Ago, Agu;
-  pmod_vec_x8_t Aka, Ake, Aki, Ako, Aku;
-  pmod_vec_x8_t Ama, Ame, Ami, Amo, Amu;
-  pmod_vec_x8_t Asa, Ase, Asi, Aso, Asu;
-  pmod_vec_x8_t BCa, BCe, BCi, BCo, BCu;
-  pmod_vec_x8_t Da, De, Di, Do, Du;
-  pmod_vec_x8_t Eba, Ebe, Ebi, Ebo, Ebu;
-  pmod_vec_x8_t Ega, Ege, Egi, Ego, Egu;
-  pmod_vec_x8_t Eka, Eke, Eki, Eko, Eku;
-  pmod_vec_x8_t Ema, Eme, Emi, Emo, Emu;
-  pmod_vec_x8_t Esa, Ese, Esi, Eso, Esu;
+  pmod_mat_x8_t Aba, Abe, Abi, Abo, Abu;
+  pmod_mat_x8_t Aga, Age, Agi, Ago, Agu;
+  pmod_mat_x8_t Aka, Ake, Aki, Ako, Aku;
+  pmod_mat_x8_t Ama, Ame, Ami, Amo, Amu;
+  pmod_mat_x8_t Asa, Ase, Asi, Aso, Asu;
+  pmod_mat_x8_t BCa, BCe, BCi, BCo, BCu;
+  pmod_mat_x8_t Da, De, Di, Do, Du;
+  pmod_mat_x8_t Eba, Ebe, Ebi, Ebo, Ebu;
+  pmod_mat_x8_t Ega, Ege, Egi, Ego, Egu;
+  pmod_mat_x8_t Eka, Eke, Eki, Eko, Eku;
+  pmod_mat_x8_t Ema, Eme, Emi, Emo, Emu;
+  pmod_mat_x8_t Esa, Ese, Esi, Eso, Esu;
 
   // copyFromState(A, state)
   Aba = state[0];
@@ -303,14 +298,14 @@ static void KeccakF1600_StatePermute_x8(pmod_vec_x8_t state[25]) {
   state[24] = Asu;
 }
 
-static void keccak_init_x8(pmod_vec_x8_t s[25]) {
-  static const pmod_vec_x8_t zero = SET1_CT_x8(0);
+static void keccak_init_x8(pmod_mat_x8_t s[25]) {
+  static const pmod_mat_x8_t zero = SET1_CT_x8(0);
 
   unsigned int i;
   for (i = 0; i < 25; i++) s[i] = zero;
 }
 
-static unsigned int keccak_absorb_x8_raw(pmod_vec_x8_t s[25], unsigned int pos,
+static unsigned int keccak_absorb_x8_raw(pmod_mat_x8_t s[25], unsigned int pos,
                                           unsigned int r, const uint8_t **in,
                                           size_t inlen, uint32_t offset) {
   unsigned int i;
@@ -320,7 +315,7 @@ static unsigned int keccak_absorb_x8_raw(pmod_vec_x8_t s[25], unsigned int pos,
       const uint8_t *tmp = (*in++) + offset;
       static uint64_t buf[8] align64;
       for (int j = 0; j < 8; j++) buf[j] = tmp[j];
-      pmod_vec_x8_t tmp_x8 = LOAD_x8(buf);
+      pmod_mat_x8_t tmp_x8 = LOAD_x8(buf);
       s[i / 8] = XOR_x8(s[i / 8], SLLI_x8(tmp_x8, 8 * (i & 0x07)));
     }
     inlen -= r - pos;
@@ -332,15 +327,15 @@ static unsigned int keccak_absorb_x8_raw(pmod_vec_x8_t s[25], unsigned int pos,
     const uint8_t *tmp = (*in++) + offset;
     static uint64_t buf[8] align64;
     for (int j = 0; j < 8; j++) buf[j] = tmp[j];
-    pmod_vec_x8_t tmp_x8 = LOAD_x8(buf);
+    pmod_mat_x8_t tmp_x8 = LOAD_x8(buf);
     s[i / 8] = XOR_x8(s[i / 8], SLLI_x8(tmp_x8, 8 * (i & 0x07)));
   }
 
   return i;
 }
 
-static unsigned int keccak_absorb_x8(pmod_vec_x8_t s[25], unsigned int pos,
-                                     unsigned int r, const pmod_vec_x8_t *in,
+static unsigned int keccak_absorb_x8(pmod_mat_x8_t s[25], unsigned int pos,
+                                     unsigned int r, const pmod_mat_x8_t *in,
                                      size_t inlen) {
   unsigned int i;
 
@@ -360,20 +355,20 @@ static unsigned int keccak_absorb_x8(pmod_vec_x8_t s[25], unsigned int pos,
   return i;
 }
 
-static void keccak_finalize_x8(pmod_vec_x8_t s[25], unsigned int pos,
+static void keccak_finalize_x8(pmod_mat_x8_t s[25], unsigned int pos,
                                unsigned int r, uint8_t p) {
-  static const pmod_vec_x8_t pow63 = SET1_CT_x8(1ULL << 63);
+  static const pmod_mat_x8_t pow63 = SET1_CT_x8(1ULL << 63);
 
-  const pmod_vec_x8_t p_x8 = SET1_x8(p);
+  const pmod_mat_x8_t p_x8 = SET1_x8(p);
 
   s[pos / 8] = XOR_x8(s[pos / 8], SLLI_x8(p_x8, 8 * (pos % 8)));
   s[r / 8 - 1] = XOR_x8(s[r / 8 - 1], pow63);
 }
 
-static unsigned int keccak_squeeze_x8(pmod_vec_x8_t *out, size_t outlen,
-                                      pmod_vec_x8_t s[25], unsigned int pos,
+static unsigned int keccak_squeeze_x8(pmod_mat_x8_t *out, size_t outlen,
+                                      pmod_mat_x8_t s[25], unsigned int pos,
                                       unsigned int r) {
-  static const pmod_vec_x8_t byte_mask = SET1_CT_x8(0xFF);
+  static const pmod_mat_x8_t byte_mask = SET1_CT_x8(0xFF);
 
   unsigned int i;
 
@@ -391,15 +386,15 @@ static unsigned int keccak_squeeze_x8(pmod_vec_x8_t *out, size_t outlen,
   return pos;
 }
 
-static void keccak_absorb_once_x8(pmod_vec_x8_t s[25], unsigned int r,
-                                  const pmod_vec_x8_t *in, size_t inlen,
+static void keccak_absorb_once_x8(pmod_mat_x8_t s[25], unsigned int r,
+                                  const pmod_mat_x8_t *in, size_t inlen,
                                   uint8_t p) {
   unsigned int i;
 
-  static const pmod_vec_x8_t zero = SET1_CT_x8(0);
-  static const pmod_vec_x8_t pow63 = SET1_CT_x8(1ULL << 63);
+  static const pmod_mat_x8_t zero = SET1_CT_x8(0);
+  static const pmod_mat_x8_t pow63 = SET1_CT_x8(1ULL << 63);
 
-  const pmod_vec_x8_t p_x8 = SET1_x8(p);
+  const pmod_mat_x8_t p_x8 = SET1_x8(p);
 
   for (i = 0; i < 25; i++) s[i] = zero;
 
@@ -417,8 +412,8 @@ static void keccak_absorb_once_x8(pmod_vec_x8_t s[25], unsigned int r,
   s[(r - 1) / 8] = XOR_x8(s[(r - 1) / 8], pow63);
 }
 
-static void keccak_squeezeblocks_x8(pmod_vec_x8_t *out, size_t nblocks,
-                                    pmod_vec_x8_t s[25], unsigned int r) {
+static void keccak_squeezeblocks_x8(pmod_mat_x8_t *out, size_t nblocks,
+                                    pmod_mat_x8_t s[25], unsigned int r) {
   unsigned int i;
 
   while (nblocks) {
@@ -429,7 +424,7 @@ static void keccak_squeezeblocks_x8(pmod_vec_x8_t *out, size_t nblocks,
   }
 }
 
-void shake256_x8(pmod_vec_x8_t *out, size_t outlen, const pmod_vec_x8_t *in,
+void shake256_x8(pmod_mat_x8_t *out, size_t outlen, const pmod_mat_x8_t *in,
                  size_t inlen) {
   size_t nblocks;
   keccak_state_x8 state;
@@ -453,7 +448,7 @@ void shake256_x8_absorb_raw(keccak_state_x8 *state, const uint8_t **in,
       keccak_absorb_x8_raw(state->s, state->pos, SHAKE256_RATE, in, inlen, offset);
 }
 
-void shake256_x8_absorb(keccak_state_x8 *state, const pmod_vec_x8_t *in,
+void shake256_x8_absorb(keccak_state_x8 *state, const pmod_mat_x8_t *in,
                         size_t inlen) {
   state->pos = keccak_absorb_x8(state->s, state->pos, SHAKE256_RATE, in, inlen);
 }
@@ -463,19 +458,19 @@ void shake256_x8_finalize(keccak_state_x8 *state) {
   state->pos = SHAKE256_RATE;
 }
 
-void shake256_x8_squeeze(pmod_vec_x8_t *out, size_t outlen,
+void shake256_x8_squeeze(pmod_mat_x8_t *out, size_t outlen,
                          keccak_state_x8 *state) {
   state->pos =
       keccak_squeeze_x8(out, outlen, state->s, state->pos, SHAKE256_RATE);
 }
 
-void shake256_x8_absorb_once(keccak_state_x8 *state, const pmod_vec_x8_t *in,
+void shake256_x8_absorb_once(keccak_state_x8 *state, const pmod_mat_x8_t *in,
                              size_t inlen) {
   keccak_absorb_once_x8(state->s, SHAKE256_RATE, in, inlen, 0x1F);
   state->pos = SHAKE256_RATE;
 }
 
-void shake256_x8_squeezeblocks(pmod_vec_x8_t *out, size_t nblocks,
+void shake256_x8_squeezeblocks(pmod_mat_x8_t *out, size_t nblocks,
                                keccak_state_x8 *state) {
   keccak_squeezeblocks_x8(out, nblocks, state->s, SHAKE256_RATE);
 }

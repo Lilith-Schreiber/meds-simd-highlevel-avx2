@@ -2,6 +2,16 @@
 #define SEED_H
 
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+
+#include "fips202.h"
+
+#ifndef MEDS_t
+#include "params.h"
+#endif
+
+#include "log.h"
 
 #define SEED_TREE_ADDR(h, i) ((1 << (h)) - 1 + (i))
 

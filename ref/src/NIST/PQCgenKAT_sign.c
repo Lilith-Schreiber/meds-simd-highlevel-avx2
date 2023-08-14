@@ -28,13 +28,13 @@ property. The software developed by NIST employees is not subject to copyright
 protection within the United States.
 */
 
+#include "rng.h"
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "api.h"
-#include "rng.h"
 #include "measure.h"
 
 #define MAX_MARKER_LEN 50

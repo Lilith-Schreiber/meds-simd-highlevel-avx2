@@ -1,6 +1,7 @@
 #ifndef BITSTREAM_H
 #define BITSTREAM_H
 
+#include <stdio.h>
 #include <stdint.h>
 #include <stddef.h>
 

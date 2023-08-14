@@ -11,15 +11,6 @@
 
 #include "measure.h"
 
-// #include <x86intrin.h>
-
-// double osfreq(void);
-
-// long long cpucycles(void)
-// {
-//   return __rdtsc();
-// }
-
 int main(int argc, char *argv[])
 {
   printf("name: %s\n", MEDS_name);

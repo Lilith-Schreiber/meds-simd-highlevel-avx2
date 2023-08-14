@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 
-#define LOG_MEASURE
+// #define LOG_MEASURE
 
 #ifdef LOG_MEASURE
 

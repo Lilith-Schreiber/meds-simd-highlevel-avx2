@@ -1,6 +1,4 @@
 #include "vec_x8.h"
-#include "params.h"
-#include "matrixmod.h"
 
 uint64_t extract_vec_x8(__m512i x, int pos) {  
   uint64_t buf[8] align64;

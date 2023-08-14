@@ -4,7 +4,7 @@
 
 extern FILE *measure_log;
 
-// #define SEP_HASH
+#define SEP_HASH
 
 int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
 #ifdef LOG_MEASURE
@@ -86,7 +86,7 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
   pmod_mat_x16_t G0prime_vec[MEDS_k * MEDS_m * MEDS_n];
 
   pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
-  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1(G[0][i]);
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_x16(G[0][i]);
 
   pmod_mat_x16_t A_vec[MEDS_m * MEDS_m];
   pmod_mat_x16_t B_vec[MEDS_n * MEDS_n];
@@ -133,7 +133,7 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
     START(vectorize_time);
     for (int i = 0; i < MEDS_k * MEDS_k; i++)
       T_vec[i] = pmod_mat_entry_x16(T, 1, MEDS_k * MEDS_k, 0, i);
-    Amm_vec = LOAD(Amm);
+    Amm_vec = LOAD_x16(Amm);
     END(vectorize_time_sum, vectorize_time);
 
     START(gen_G0p_time);
@@ -142,7 +142,7 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
     END(gen_G0p_time_sum, gen_G0p_time);
 
     START(solve_time);
-    pmod_vec_mask_t valid = solve_x16(A_vec, B_inv_vec, G0prime_vec, Amm_vec);
+    pmod_mat_mask_x16_t valid = solve_x16(A_vec, B_inv_vec, G0prime_vec, Amm_vec);
     END(solve_time_sum, solve_time);
 
     START(inv_time);
@@ -676,7 +676,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   pmod_mat_x16_t G_vec[MEDS_k * MEDS_m * MEDS_n];
   pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
 
-  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1(G_0[i]);
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_x16(G_0[i]);
 
   int num_valid = 0;
   int num_invalid = 0;
@@ -731,7 +731,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_vec_mask_t valid =
+    pmod_mat_mask_x16_t valid =
         pmod_mat_syst_ct_x16(G_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
@@ -804,7 +804,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
   keccak_state_x8 h_shake_x8;
   static uint8_t digest_G[MEDS_t][MEDS_digest_bytes] = {0};
-  pmod_vec_x8_t digest_vec[MEDS_digest_bytes] = {0};
+  pmod_mat_x8_t digest_vec[MEDS_digest_bytes] = {0};
 
   for (int t = 0; t < MEDS_t; t += 8) {
     START(shake_time);
@@ -1443,7 +1443,7 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_vec_mask_t valid =
+    pmod_mat_mask_x16_t valid =
         pmod_mat_syst_ct_x16(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
@@ -1518,7 +1518,7 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
   keccak_state_x8 h_shake_x8;
   static uint8_t digest_G_hat[MEDS_t][MEDS_digest_bytes] = {0};
-  pmod_vec_x8_t digest_vec[MEDS_digest_bytes] = {0};
+  pmod_mat_x8_t digest_vec[MEDS_digest_bytes] = {0};
 
   for (int t = 0; t < MEDS_t; t += 8) {
     START(shake_time);
@@ -1973,7 +1973,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
 
   // START(vectorize_G0_time);
-  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1(G_0[i]);
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_x16(G_0[i]);
   // END(vectorize_G0_time_sum, vectorize_G0_time);
 
   pmod_mat_x16_t A_vec[MEDS_m * MEDS_m];
@@ -2044,7 +2044,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_vec_mask_t valid =
+    pmod_mat_mask_x16_t valid =
         pmod_mat_syst_ct_x16(G_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
@@ -2698,7 +2698,7 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_vec_mask_t valid =
+    pmod_mat_mask_x16_t valid =
         pmod_mat_syst_ct_x16(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
