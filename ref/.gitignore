@@ -4,6 +4,7 @@
 bench.txt
 params.h
 build/
+build.*/
 debug/
 __pycache__/
 MEDS/
