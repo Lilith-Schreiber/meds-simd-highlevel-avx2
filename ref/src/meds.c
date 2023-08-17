@@ -76,21 +76,21 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
   pmod_mat_t *T[16];
   for (int i = 0; i < 16; i++) T[i] = T_data[i];
 
-  uint32_t Amm[16] align64;
+  uint32_t Amm[16] aligned;
 
-  pmod_mat_x16_t A_inv_vec[MEDS_m * MEDS_m];
-  pmod_mat_x16_t B_inv_vec[MEDS_n * MEDS_n];
+  pmod_mat_w32_t A_inv_vec[MEDS_m * MEDS_m];
+  pmod_mat_w32_t B_inv_vec[MEDS_n * MEDS_n];
 
-  pmod_mat_x16_t T_vec[MEDS_k * MEDS_k];
-  pmod_mat_x16_t Amm_vec;
-  pmod_mat_x16_t G0prime_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t T_vec[MEDS_k * MEDS_k];
+  pmod_mat_w32_t Amm_vec;
+  pmod_mat_w32_t G0prime_vec[MEDS_k * MEDS_m * MEDS_n];
 
-  pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
-  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_x16(G[0][i]);
+  pmod_mat_w32_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_w32(G[0][i]);
 
-  pmod_mat_x16_t A_vec[MEDS_m * MEDS_m];
-  pmod_mat_x16_t B_vec[MEDS_n * MEDS_n];
-  pmod_mat_x16_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t A_vec[MEDS_m * MEDS_m];
+  pmod_mat_w32_t B_vec[MEDS_n * MEDS_n];
+  pmod_mat_w32_t G_vec[MEDS_k * MEDS_m * MEDS_n];
 
   int num_valid = 1;
   int num_invalid = 0;
@@ -132,43 +132,43 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
 
     START(vectorize_time);
     for (int i = 0; i < MEDS_k * MEDS_k; i++)
-      T_vec[i] = pmod_mat_entry_x16(T, 1, MEDS_k * MEDS_k, 0, i);
-    Amm_vec = LOAD_x16(Amm);
+      T_vec[i] = pmod_mat_entry_w32(T, 1, MEDS_k * MEDS_k, 0, i);
+    Amm_vec = LOAD_w32(Amm);
     END(vectorize_time_sum, vectorize_time);
 
     START(gen_G0p_time);
-    pmod_mat_mul_x16(G0prime_vec, MEDS_k, MEDS_m * MEDS_n, T_vec, MEDS_k,
+    pmod_mat_mul_w32(G0prime_vec, MEDS_k, MEDS_m * MEDS_n, T_vec, MEDS_k,
                      MEDS_k, G0_vec, MEDS_k, MEDS_m * MEDS_n);
     END(gen_G0p_time_sum, gen_G0p_time);
 
     START(solve_time);
-    pmod_mat_mask_x16_t valid = solve_x16(A_vec, B_inv_vec, G0prime_vec, Amm_vec);
+    pmod_mat_mask_w32_t valid = solve_w32(A_vec, B_inv_vec, G0prime_vec, Amm_vec);
     END(solve_time_sum, solve_time);
 
     START(inv_time);
-    valid &= pmod_mat_inv_x16(B_vec, B_inv_vec, MEDS_n, MEDS_n);
-    valid &= pmod_mat_inv_x16(A_inv_vec, A_vec, MEDS_m, MEDS_m);
+    valid &= pmod_mat_inv_w32(B_vec, B_inv_vec, MEDS_n, MEDS_n);
+    valid &= pmod_mat_inv_w32(A_inv_vec, A_vec, MEDS_m, MEDS_m);
     END(inv_time_sum, inv_time);
 
     START(pi_time);
-    pi_x16(G_vec, A_vec, B_vec, G0_vec);
+    pi_w32(G_vec, A_vec, B_vec, G0_vec);
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    valid &= pmod_mat_syst_ct_x16(G_vec, MEDS_k, MEDS_m * MEDS_n);
+    valid &= pmod_mat_syst_ct_w32(G_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_m * MEDS_m; i++) {
-      pmod_mat_set_entry_x16(A_inv + num_tried, 1, MEDS_m * MEDS_m, 0, i,
+      pmod_mat_set_entry_w32(A_inv + num_tried, 1, MEDS_m * MEDS_m, 0, i,
                              A_inv_vec[i], batch_size);
     }
     for (int i = 0; i < MEDS_n * MEDS_n; i++) {
-      pmod_mat_set_entry_x16(B_inv + num_tried, 1, MEDS_n * MEDS_n, 0, i,
+      pmod_mat_set_entry_w32(B_inv + num_tried, 1, MEDS_n * MEDS_n, 0, i,
                              B_inv_vec[i], batch_size);
     }
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_x16(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
+      pmod_mat_set_entry_w32(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
                              G_vec[i], batch_size);
     }
     END(scalarize_time_sum, scalarize_time);
@@ -177,7 +177,7 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
 
     for (int t = 0; t < batch_size; t++) {
       int i = indexes[t + num_tried];
-      if (extract_mask_x16(valid, t) == 0) {
+      if (extract_mask_w32(valid, t) == 0) {
         int idx = MEDS_s + num_invalid + invalids;
 
         indexes[idx] = i;
@@ -670,13 +670,13 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
   for (int i = 0; i < MEDS_t << 1; i++) G[i] = G_data[i];
 
-  pmod_mat_x16_t A_vec[MEDS_m * MEDS_m];
-  pmod_mat_x16_t B_vec[MEDS_n * MEDS_n];
+  pmod_mat_w32_t A_vec[MEDS_m * MEDS_m];
+  pmod_mat_w32_t B_vec[MEDS_n * MEDS_n];
 
-  pmod_mat_x16_t G_vec[MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
 
-  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_x16(G_0[i]);
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_w32(G_0[i]);
 
   int num_valid = 0;
   int num_invalid = 0;
@@ -720,24 +720,24 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     START(vectorize_time);
     for (int i = 0; i < MEDS_m * MEDS_m; i++)
       A_vec[i] =
-          pmod_mat_entry_x16(A_tilde + num_tried, 1, MEDS_m * MEDS_m, 0, i);
+          pmod_mat_entry_w32(A_tilde + num_tried, 1, MEDS_m * MEDS_m, 0, i);
     for (int i = 0; i < MEDS_n * MEDS_n; i++)
       B_vec[i] =
-          pmod_mat_entry_x16(B_tilde + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+          pmod_mat_entry_w32(B_tilde + num_tried, 1, MEDS_n * MEDS_n, 0, i);
     END(vectorize_time_sum, vectorize_time);
 
     START(pi_time);
-    pi_x16(G_vec, A_vec, B_vec, G0_vec);
+    pi_w32(G_vec, A_vec, B_vec, G0_vec);
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_mat_mask_x16_t valid =
-        pmod_mat_syst_ct_x16(G_vec, MEDS_k, MEDS_m * MEDS_n);
+    pmod_mat_mask_w32_t valid =
+        pmod_mat_syst_ct_w32(G_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_x16(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
+      pmod_mat_set_entry_w32(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
                              G_vec[i], batch_size);
     }
     END(scalarize_time_sum, scalarize_time);
@@ -746,7 +746,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
     for (int t = 0; t < batch_size; t++) {
       int i = indexes[t + num_tried];
-      if (extract_mask_x16(valid, t) == 0) {
+      if (extract_mask_w32(valid, t) == 0) {
         int idx = MEDS_t + num_invalid + invalids;
         indexes[idx] = i;
 
@@ -802,9 +802,9 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
   keccak_state h_shake;
   shake256_init(&h_shake);
 
-  keccak_state_x8 h_shake_x8;
+  keccak_state_w64 h_shake_w64;
   static uint8_t digest_G[MEDS_t][MEDS_digest_bytes] = {0};
-  pmod_mat_x8_t digest_vec[MEDS_digest_bytes] = {0};
+  pmod_mat_w64_t digest_vec[MEDS_digest_bytes] = {0};
 
   for (int t = 0; t < MEDS_t; t += 8) {
     START(shake_time);
@@ -812,15 +812,15 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     int batch_size = MEDS_t - t;
     if (batch_size > 8) batch_size = 8;
 
-    shake256_x8_init(&h_shake_x8);
-    shake256_x8_absorb_raw(&h_shake_x8, (const uint8_t **)bs_buf,
+    shake256_w64_init(&h_shake_w64);
+    shake256_w64_absorb_raw(&h_shake_w64, (const uint8_t **)bs_buf,
                            bitstream_size, t);
-    shake256_x8_finalize(&h_shake_x8);
-    shake256_x8_squeeze(digest_vec, MEDS_digest_bytes, &h_shake_x8);
+    shake256_w64_finalize(&h_shake_w64);
+    shake256_w64_squeeze(digest_vec, MEDS_digest_bytes, &h_shake_w64);
 
     for (int j = 0; j < MEDS_digest_bytes; j++) {
-      uint64_t buf[8] align64;
-      STORE_x8(buf, digest_vec[j]);
+      uint64_t buf[8] aligned;
+      STORE_w64(buf, digest_vec[j]);
       for (int i = 0; i < batch_size; i++) {
         digest_G[t + i][j] = (uint8_t)buf[i];
       }
@@ -1359,11 +1359,11 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
   for (int i = MEDS_t; i < MEDS_t << 1; i++) G0[i] = G_dump;
 
-  pmod_mat_x16_t mu_vec[MEDS_m * MEDS_m];
-  pmod_mat_x16_t nu_vec[MEDS_n * MEDS_n];
+  pmod_mat_w32_t mu_vec[MEDS_m * MEDS_m];
+  pmod_mat_w32_t nu_vec[MEDS_n * MEDS_n];
 
-  pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_x16_t G_hat_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G_hat_vec[MEDS_k * MEDS_m * MEDS_n];
 
   int num_valid = 0;
   int num_invalid = 0;
@@ -1431,25 +1431,25 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
     START(vectorize_time);
     for (int i = 0; i < MEDS_m * MEDS_m; i++)
-      mu_vec[i] = pmod_mat_entry_x16(mu + num_tried, 1, MEDS_m * MEDS_m, 0, i);
+      mu_vec[i] = pmod_mat_entry_w32(mu + num_tried, 1, MEDS_m * MEDS_m, 0, i);
     for (int i = 0; i < MEDS_n * MEDS_n; i++)
-      nu_vec[i] = pmod_mat_entry_x16(nu + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+      nu_vec[i] = pmod_mat_entry_w32(nu + num_tried, 1, MEDS_n * MEDS_n, 0, i);
     for (int i = 0; i < MEDS_k * MEDS_n * MEDS_n; i++)
-      G0_vec[i] = pmod_mat_entry_x16(G0 + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+      G0_vec[i] = pmod_mat_entry_w32(G0 + num_tried, 1, MEDS_n * MEDS_n, 0, i);
     END(vectorize_time_sum, vectorize_time);
 
     START(pi_time);
-    pi_x16(G_hat_vec, mu_vec, nu_vec, G0_vec);
+    pi_w32(G_hat_vec, mu_vec, nu_vec, G0_vec);
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_mat_mask_x16_t valid =
-        pmod_mat_syst_ct_x16(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
+    pmod_mat_mask_w32_t valid =
+        pmod_mat_syst_ct_w32(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_x16(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0,
+      pmod_mat_set_entry_w32(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0,
                              i, G_hat_vec[i], batch_size);
     }
     END(scalarize_time_sum, scalarize_time);
@@ -1458,7 +1458,7 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
     for (int t = 0; t < batch_size; t++) {
       int i = indexes[t + num_tried];
-      if (extract_mask_x16(valid, t) == 0) {
+      if (extract_mask_w32(valid, t) == 0) {
         int idx = MEDS_t + num_invalid + invalids;
 
         indexes[idx] = i;
@@ -1516,9 +1516,9 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
   keccak_state shake;
   shake256_init(&shake);
 
-  keccak_state_x8 h_shake_x8;
+  keccak_state_w64 h_shake_w64;
   static uint8_t digest_G_hat[MEDS_t][MEDS_digest_bytes] = {0};
-  pmod_mat_x8_t digest_vec[MEDS_digest_bytes] = {0};
+  pmod_mat_w64_t digest_vec[MEDS_digest_bytes] = {0};
 
   for (int t = 0; t < MEDS_t; t += 8) {
     START(shake_time);
@@ -1526,15 +1526,15 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
     int batch_size = MEDS_t - t;
     if (batch_size > 8) batch_size = 8;
 
-    shake256_x8_init(&h_shake_x8);
-    shake256_x8_absorb_raw(&h_shake_x8, (const uint8_t **)bs_buf,
+    shake256_w64_init(&h_shake_w64);
+    shake256_w64_absorb_raw(&h_shake_w64, (const uint8_t **)bs_buf,
                            bitstream_size, t);
-    shake256_x8_finalize(&h_shake_x8);
-    shake256_x8_squeeze(digest_vec, MEDS_digest_bytes, &h_shake_x8);
+    shake256_w64_finalize(&h_shake_w64);
+    shake256_w64_squeeze(digest_vec, MEDS_digest_bytes, &h_shake_w64);
 
     for (int j = 0; j < MEDS_digest_bytes; j++) {
-      uint64_t buf[8] align64;
-      STORE_x8(buf, digest_vec[j]);
+      uint64_t buf[8] aligned;
+      STORE_w64(buf, digest_vec[j]);
       for (int i = 0; i < batch_size; i++) {
         digest_G_hat[t + i][j] = (uint8_t)buf[i];
       }
@@ -1969,15 +1969,15 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     B_tilde[i] = B_tilde_dump;
   }
 
-  pmod_mat_x16_t G_vec[MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
 
   // START(vectorize_G0_time);
-  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_x16(G_0[i]);
+  for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) G0_vec[i] = SET1_w32(G_0[i]);
   // END(vectorize_G0_time_sum, vectorize_G0_time);
 
-  pmod_mat_x16_t A_vec[MEDS_m * MEDS_m];
-  pmod_mat_x16_t B_vec[MEDS_n * MEDS_n];
+  pmod_mat_w32_t A_vec[MEDS_m * MEDS_m];
+  pmod_mat_w32_t B_vec[MEDS_n * MEDS_n];
 
   static pmod_mat_t G_data[MEDS_t][MEDS_k * MEDS_m * MEDS_n];
   static pmod_mat_t G_dump[MEDS_k * MEDS_m * MEDS_n];
@@ -2033,24 +2033,24 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
     START(vectorize_time);
     for (int i = 0; i < MEDS_m * MEDS_m; i++)
       A_vec[i] =
-          pmod_mat_entry_x16(A_tilde + num_tried, 1, MEDS_m * MEDS_m, 0, i);
+          pmod_mat_entry_w32(A_tilde + num_tried, 1, MEDS_m * MEDS_m, 0, i);
     for (int i = 0; i < MEDS_n * MEDS_n; i++)
       B_vec[i] =
-          pmod_mat_entry_x16(B_tilde + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+          pmod_mat_entry_w32(B_tilde + num_tried, 1, MEDS_n * MEDS_n, 0, i);
     END(vectorize_time_sum, vectorize_time);
 
     START(pi_time);
-    pi_x16(G_vec, A_vec, B_vec, G0_vec);
+    pi_w32(G_vec, A_vec, B_vec, G0_vec);
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_mat_mask_x16_t valid =
-        pmod_mat_syst_ct_x16(G_vec, MEDS_k, MEDS_m * MEDS_n);
+    pmod_mat_mask_w32_t valid =
+        pmod_mat_syst_ct_w32(G_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_x16(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
+      pmod_mat_set_entry_w32(G + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0, i,
                              G_vec[i], batch_size);
     }
     END(scalarize_time_sum, scalarize_time);
@@ -2059,7 +2059,7 @@ int crypto_sign_vec(unsigned char *sm, unsigned long long *smlen,
 
     for (int t = 0; t < batch_size; t++) {
       int i = indexes[t + num_tried];
-      if (extract_mask_x16(valid, t) == 0) {
+      if (extract_mask_w32(valid, t) == 0) {
         int idx = MEDS_t + num_invalid + invalids;
 
         indexes[idx] = i;
@@ -2614,11 +2614,11 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
   for (int i = MEDS_t; i < MEDS_t << 1; i++) G0[i] = G_dump;
 
-  pmod_mat_x16_t mu_vec[MEDS_m * MEDS_m];
-  pmod_mat_x16_t nu_vec[MEDS_n * MEDS_n];
+  pmod_mat_w32_t mu_vec[MEDS_m * MEDS_m];
+  pmod_mat_w32_t nu_vec[MEDS_n * MEDS_n];
 
-  pmod_mat_x16_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_x16_t G_hat_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G0_vec[MEDS_k * MEDS_m * MEDS_n];
+  pmod_mat_w32_t G_hat_vec[MEDS_k * MEDS_m * MEDS_n];
 
   int num_valid = 0;
   int num_invalid = 0;
@@ -2686,25 +2686,25 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
     START(vectorize_time);
     for (int i = 0; i < MEDS_m * MEDS_m; i++)
-      mu_vec[i] = pmod_mat_entry_x16(mu + num_tried, 1, MEDS_m * MEDS_m, 0, i);
+      mu_vec[i] = pmod_mat_entry_w32(mu + num_tried, 1, MEDS_m * MEDS_m, 0, i);
     for (int i = 0; i < MEDS_n * MEDS_n; i++)
-      nu_vec[i] = pmod_mat_entry_x16(nu + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+      nu_vec[i] = pmod_mat_entry_w32(nu + num_tried, 1, MEDS_n * MEDS_n, 0, i);
     for (int i = 0; i < MEDS_k * MEDS_n * MEDS_n; i++)
-      G0_vec[i] = pmod_mat_entry_x16(G0 + num_tried, 1, MEDS_n * MEDS_n, 0, i);
+      G0_vec[i] = pmod_mat_entry_w32(G0 + num_tried, 1, MEDS_n * MEDS_n, 0, i);
     END(vectorize_time_sum, vectorize_time);
 
     START(pi_time);
-    pi_x16(G_hat_vec, mu_vec, nu_vec, G0_vec);
+    pi_w32(G_hat_vec, mu_vec, nu_vec, G0_vec);
     END(pi_time_sum, pi_time);
 
     START(syst_time);
-    pmod_mat_mask_x16_t valid =
-        pmod_mat_syst_ct_x16(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
+    pmod_mat_mask_w32_t valid =
+        pmod_mat_syst_ct_w32(G_hat_vec, MEDS_k, MEDS_m * MEDS_n);
     END(syst_time_sum, syst_time);
 
     START(scalarize_time);
     for (int i = 0; i < MEDS_k * MEDS_m * MEDS_n; i++) {
-      pmod_mat_set_entry_x16(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0,
+      pmod_mat_set_entry_w32(G_hat + num_tried, 1, MEDS_k * MEDS_m * MEDS_n, 0,
                              i, G_hat_vec[i], batch_size);
     }
     END(scalarize_time_sum, scalarize_time);
@@ -2713,7 +2713,7 @@ int crypto_sign_open_vec(unsigned char *m, unsigned long long *mlen,
 
     for (int t = 0; t < batch_size; t++) {
       int i = indexes[t + num_tried];
-      if (extract_mask_x16(valid, t) == 0) {
+      if (extract_mask_w32(valid, t) == 0) {
         int idx = MEDS_t + num_invalid + invalids;
 
         indexes[idx] = i;

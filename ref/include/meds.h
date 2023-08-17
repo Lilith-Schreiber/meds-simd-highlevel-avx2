@@ -17,11 +17,10 @@
 #include "seed.h"
 #include "util.h"
 
-#include "vec_x16.h"
 #include "bitstream_batch.h"
-#include "matrixmod_x16.h"
-#include "util_x16.h"
-#include "fips202_x8.h"
+#include "matrixmod_vec.h"
+#include "util_vec.h"
+#include "fips202_vec.h"
 
 #endif
 

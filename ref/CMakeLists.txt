@@ -25,6 +25,7 @@ set(NIST_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include/NIST)
 
 set(LIBS
     bitstream
+    bitstream_batch
     fips202
     matrixmod
     measure
@@ -32,13 +33,11 @@ set(LIBS
     randombytes
     seed
     util
-
-    bitstream_batch
-    vec_x16
-    util_x16
-    matrixmod_x16
-    fips202_x8
-    vec_x8)
+    vec_w32
+    vec_w64
+    util_vec
+    matrixmod_vec
+    fips202_vec)
 
 # ##############################################################################
 # Dump parameters
@@ -103,19 +102,19 @@ foreach(param ${PARAMS})
     randombytes_${param}
     seed_${param}
     util_${param}
-    
-    vec_x16_${param}
-    util_x16_${param}
-    matrixmod_x16_${param}
+    vec_w32_${param}
+    util_vec_${param}
+    matrixmod_vec_${param}
     bitstream_batch_${param})
 
   target_link_libraries(seed_${param} fips202_${param})
   target_link_libraries(util_${param} matrixmod_${param} fips202_${param})
   target_link_libraries(randombytes_${param} ${OPENSSL_LIBRARIES})
 
-  target_link_libraries(matrixmod_x16_${param} vec_x16_${param})
-  target_link_libraries(util_x16_${param} vec_x16_${param} matrixmod_x16_${param})
-  target_link_libraries(fips202_x8_${param} vec_x8_${param})
+  target_link_libraries(matrixmod_vec_${param} vec_w32_${param})
+  target_link_libraries(util_vec_${param} vec_w32_${param}
+                        matrixmod_vec_${param})
+  target_link_libraries(fips202_vec_${param} vec_w64_${param})
 
   # ############################################################################
   # Build test
