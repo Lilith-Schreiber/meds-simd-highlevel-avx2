@@ -176,7 +176,7 @@ __mmask8 NEQ_w64(__m256i a, __m256i b) {
         return r;
 }
 
-uint64_t extract_vec_w64(__m512i x, int pos) {  
+uint64_t extract_vec_w64(__m256i x, int pos) {  
   uint64_t buf[8] aligned;
   STORE_w64(buf, x);
   return buf[pos];
