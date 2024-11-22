@@ -40,7 +40,7 @@ __mmask8 GT_w32(__m256i a, __m256i b) {
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
 
-                if (ret[7-i] == 0)
+                if (ret[i] == 0)
                         r = r | 0;
                 else
                         r = r | 1;
@@ -61,7 +61,7 @@ __mmask8 GE_w32(__m256i a, __m256i b) {
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
 
-                if (ret[7-i] == 0)
+                if (ret[i] == 0)
                         r = r | 0;
                 else
                         r = r | 1;
@@ -82,7 +82,7 @@ __mmask8 LT_w32(__m256i a, __m256i b) {
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
 
-                if (ret[7-i] == 0)
+                if (ret[i] == 0)
                         r = r | 0;
                 else
                         r = r | 1;
@@ -103,7 +103,7 @@ __mmask8 LE_w32(__m256i a, __m256i b) {
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
 
-                if (ret[7-i] == 0)
+                if (ret[i] == 0)
                         r = r | 0;
                 else
                         r = r | 1;
@@ -124,7 +124,7 @@ __mmask8 EQ_w32(__m256i a, __m256i b) {
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
 
-                if (ret[7-i] == 0)
+                if (ret[i] == 0)
                         r = r | 0;
                 else
                         r = r | 1;
@@ -145,7 +145,7 @@ __mmask8 NEQ_w32(__m256i a, __m256i b) {
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
 
-                if (ret[7-i] == 0)
+                if (ret[i] == 0)
                         r = r | 0;
                 else
                         r = r | 1;

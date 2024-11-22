@@ -35,7 +35,7 @@ __mmask8 GT_w64(__m256i a, __m256i b) {
         int* retf = (int*)&ret;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[3-i] == 0) {
+                if (retf[i] == 0) {
                         r = r << 1;
                         r = r | 0;
                         r = r << 1;
@@ -61,7 +61,7 @@ __mmask8 GE_w64(__m256i a, __m256i b) {
         int* retf2 = (int*)&ret2;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[3-i] == 0 && retf[3-i] == 0) {
+                if (retf[i] == 0 && retf[i] == 0) {
                         r = r << 1;
                         r = r | 0;
                         r = r << 1;
@@ -87,7 +87,7 @@ __mmask8 LT_w64(__m256i a, __m256i b) {
         int* retf2 = (int*)&ret2;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[3-i] == 0 && retf[3-i] == 0) {
+                if (retf[i] == 0 && retf[i] == 0) {
                         r = r << 1;
                         r = r | 1;
                         r = r << 1;
@@ -111,7 +111,7 @@ __mmask8 LE_w64(__m256i a, __m256i b) {
         int* retf = (int*)&ret;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[3-i] == 0) {
+                if (retf[i] == 0) {
                         r = r << 1;
                         r = r | 1;
                         r = r << 1;
@@ -135,7 +135,7 @@ __mmask8 EQ_w64(__m256i a, __m256i b) {
         int* retf = (int*)&ret;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[3-i] == 0) {
+                if (retf[i] == 0) {
                         r = r << 1;
                         r = r | 0;
                         r = r << 1;
@@ -159,7 +159,7 @@ __mmask8 NEQ_w64(__m256i a, __m256i b) {
         int* retf = (int*)&ret;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[3-i] == 0) {
+                if (retf[i] == 0) {
                         r = r << 1;
                         r = r | 1;
                         r = r << 1;
