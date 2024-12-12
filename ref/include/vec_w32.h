@@ -16,17 +16,19 @@
 #define SUB_w32(a, b) _mm256_sub_epi32(a, b)
 // #define SUB_M_w32(a, b, m) _mm_mask_sub_epi32(a, m, a, b)
 
-pmod_mat_w32_t ADD_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, pmod_mat_mask_w32_t m);
-pmod_mat_w32_t SUB_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, pmod_mat_mask_w32_t m);
+pmod_mat_w32_t ADD_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, __mmask8 m);
+pmod_mat_w32_t SUB_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, __mmask8 m);
 
 #define MULLO_w32(a, b) _mm256_mullo_epi32(a, b)
 
 #define SRLI_w32(a, b) _mm256_srli_epi32(a, b)
 #define SLLI_w32(a, b) _mm256_slli_epi32(a, b)
 
-#define AND_w32(a, b) _mm256_and_si256(a, b)
+// #define AND_w32(a, b) _mm256_and_si256(a, b)
 #define OR_w32(a, b) _mm256_or_si256(a, b) 
 #define XOR_w32(a, b) _mm256_xor_si256(a, b)
+
+pmod_mat_w32_t AND_w32(pmod_mat_w32_t a, pmod_mat_w32_t b);
 
 // #define GT_w32(a, b) _mm256_cmp_ps(a, b, 30)
 // #define GE_w32(a, b) _mm256_cmp_ps(a, b, 29)
@@ -54,15 +56,15 @@ NEQ --> 28
 
 #define SET1_w32(a) _mm256_set1_epi32(a)
 #define LOAD_w32(a) _mm256_loadu_si256(a) // if there is something wrong with this function, add `&` for the parameter input
-#define STORE_w32(a, b) _mm256_store_si256(a, b)
+#define STORE_w32(a, b) _mm256_storeu_si256(a, b)
 
 int pmod_mask_count_w32(pmod_mat_mask_w32_t mask);
 
 uint32_t extract_vec_w32(__m256i x, int pos);
-uint32_t extract_mask_w32(__mmask8 x, int pos);
+uint32_t extract_mask_w32(__mmask16 x, int pos);
 
-__m256i GF_reduc_w32(const __m256i u);
-__m256i GF_mod_w32(const __m256i u);
+pmod_mat_w32_t GF_reduc_w32(const __m256i u);
+pmod_mat_w32_t GF_mod_w32(const __m256i u);
 pmod_mat_w32_t GF_inv_w32(pmod_mat_w32_t x);
 
 #endif
