@@ -1,10 +1,10 @@
 #include "vec_w64.h"
 
 pmod_mat_w64_t ADD_M_w64(pmod_mat_w64_t a, pmod_mat_w64_t b, pmod_mat_mask_w64_t m) {
-        __m256i r;
+	__m256i r;
 
-        uint64_t* r2 = (uint64_t*)&r;
-        uint64_t* a2 = (uint64_t*)&a;
+	uint64_t* r2 = (uint64_t*)&r;
+	uint64_t* a2 = (uint64_t*)&a;
         uint64_t* b2 = (uint64_t*)&b;
 
         for (int i = 0; i < 3; i++) {
@@ -15,7 +15,7 @@ pmod_mat_w64_t ADD_M_w64(pmod_mat_w64_t a, pmod_mat_w64_t b, pmod_mat_mask_w64_t
 }
 
 pmod_mat_w64_t SUB_M_w64(pmod_mat_w64_t a, pmod_mat_w64_t b, pmod_mat_mask_w64_t m) {
-        __m256i r;
+	__m256i r;
 
         uint64_t* r2 = (uint64_t*)&r;
         uint64_t* a2 = (uint64_t*)&a;
@@ -36,17 +36,17 @@ __mmask8 GT_w64(__m256i a, __m256i b) {
 
         for (int i = 0; i < 3; i++) {
                 if (retf[i] == 0) {
-                        r = r << 1;
+			r = r << 1;
+			r = r | 0;
+			r = r << 1;
                         r = r | 0;
-                        r = r << 1;
-                        r = r | 0;
-                }
-                else {
-                        r = r << 1;
+		}
+		else {
+			r = r << 1;
                         r = r | 1;
                         r = r << 1;
                         r = r | 1;
-                }
+		}
         }
 
         return r;
@@ -56,12 +56,12 @@ __mmask8 GE_w64(__m256i a, __m256i b) {
         __mmask8 r = 0x0;
 
         __m256i ret = _mm256_cmpgt_epi64(a, b);
-        __m256i ret2 = _mm256_cmpeq_epi64(a, b);
+	__m256i ret2 = _mm256_cmpeq_epi64(a, b);
         int* retf = (int*)&ret;
-        int* retf2 = (int*)&ret2;
+	int* retf2 = (int*)&ret2;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[i] == 0 && retf[i] == 0) {
+                if (retf[i] == 0 && retf2[i] == 0) {
                         r = r << 1;
                         r = r | 0;
                         r = r << 1;
@@ -87,7 +87,7 @@ __mmask8 LT_w64(__m256i a, __m256i b) {
         int* retf2 = (int*)&ret2;
 
         for (int i = 0; i < 3; i++) {
-                if (retf[i] == 0 && retf[i] == 0) {
+                if (retf[i] == 0 && retf2[i] == 0) {
                         r = r << 1;
                         r = r | 1;
                         r = r << 1;
@@ -176,9 +176,9 @@ __mmask8 NEQ_w64(__m256i a, __m256i b) {
         return r;
 }
 
-uint64_t extract_vec_w64(__m256i x, int pos) {  
+uint64_t extract_vec_w64(pmod_mat_w64_t x, int pos) {  
   uint64_t buf[4] aligned;
-  STORE_w64(buf, x);
+  STORE_w64((buf), x);
   return buf[pos];
 }
 

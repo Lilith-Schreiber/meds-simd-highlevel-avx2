@@ -1,21 +1,21 @@
 #include "vec_w32.h"
 
 pmod_mat_w32_t ADD_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, pmod_mat_mask_w32_t m) {
-        pmod_mat_w32_t r;
-
-        uint32_t* r2 = (uint32_t*)&r;
+	pmod_mat_w32_t r;
+	
+	uint32_t* r2 = (uint32_t*)&r;
         uint32_t* a2 = (uint32_t*)&a;
         uint32_t* b2 = (uint32_t*)&b;
 
-        for (int i = 0; i < 8; i++) {
-                ((m >> i) & 1)? r2[i] = a2[i] + b2[i] : a2[i];
-        }
+	for (int i = 0; i < 8; i++) {
+		((m >> i) & 1)? r2[i] = a2[i] + b2[i] : a2[i];
+	}
 
-        return r;
+	return r;
 }
 
 pmod_mat_w32_t SUB_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, pmod_mat_mask_w32_t m) {
-        pmod_mat_w32_t r;
+	pmod_mat_w32_t r;
 
         uint32_t* r2 = (uint32_t*)&r;
         uint32_t* a2 = (uint32_t*)&a;
@@ -28,14 +28,26 @@ pmod_mat_w32_t SUB_M_w32(pmod_mat_w32_t a, pmod_mat_w32_t b, pmod_mat_mask_w32_t
         return r;
 }
 
+pmod_mat_w32_t AND_w32(pmod_mat_w32_t a, pmod_mat_w32_t b) {
+	pmod_mat_w32_t result;
+	
+	__m256 a2 = _mm256_cvtepi32_ps(a);
+        __m256 b2 = _mm256_cvtepi32_ps(b);
+
+        __m256 temp_res = _mm256_and_ps(a2, b2);
+
+        result = _mm256_cvtps_epi32(temp_res);
+
+	return result;
+}
+
 __mmask8 GT_w32(__m256i a, __m256i b) {
-        __mmask8 r = 0x0;
+	__mmask8 r = 0x00;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
 
         __m256 ret = _mm256_cmp_ps(tmpA, tmpB, 30);
-        float* retf = (float*)&ret;
 
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
@@ -50,13 +62,12 @@ __mmask8 GT_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 GE_w32(__m256i a, __m256i b) {
-        __mmask8 r = 0x0;
+	__mmask8 r = 0x0;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
 
         __m256 ret = _mm256_cmp_ps(tmpA, tmpB, 29);
-        float* retf = (float*)&ret;
 
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
@@ -71,13 +82,12 @@ __mmask8 GE_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 LT_w32(__m256i a, __m256i b) {
-        __mmask8 r = 0x0;
+	__mmask8 r = 0x0;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
 
         __m256 ret = _mm256_cmp_ps(tmpA, tmpB, 1);
-        float* retf = (float*)&ret;
 
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
@@ -92,13 +102,12 @@ __mmask8 LT_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 LE_w32(__m256i a, __m256i b) {
-        __mmask8 r = 0x0;
+	__mmask8 r = 0x0;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
 
         __m256 ret = _mm256_cmp_ps(tmpA, tmpB, 2);
-        float* retf = (float*)&ret;
 
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
@@ -113,13 +122,12 @@ __mmask8 LE_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 EQ_w32(__m256i a, __m256i b) {
-        __mmask8 r = 0x0;
+	__mmask8 r = 0x0;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
 
         __m256 ret = _mm256_cmp_ps(tmpA, tmpB, 0);
-        float* retf = (float*)&ret;
 
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
@@ -134,13 +142,12 @@ __mmask8 EQ_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 NEQ_w32(__m256i a, __m256i b) {
-        __mmask8 r = 0x0;
+	__mmask8 r = 0x0;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
 
         __m256 ret = _mm256_cmp_ps(tmpA, tmpB, 28);
-        float* retf = (float*)&ret;
 
         for (int i = 0; i < 8; i++) {
                 r = r << 1;
@@ -158,13 +165,13 @@ int pmod_mask_count_w32(pmod_mat_mask_w32_t mask) {
   return __builtin_popcount(((int)mask) & 0xffff);
 }
 
-uint32_t extract_vec_w32(__m256i x, int pos) {
-  uint32_t buf[16] aligned;
+uint32_t extract_vec_w32(__m256i x, int pos) {  
+  uint32_t buf[8] aligned;
   STORE_w32(buf, x);
   return buf[pos];
 }
 
-uint32_t extract_mask_w32(__mmask8 x, int pos) { return ((uint32_t)x) & (1 << pos); }
+uint32_t extract_mask_w32(__mmask16 x, int pos) { return ((uint32_t)x) & (1 << pos); }
 
 pmod_mat_w32_t GF_reduc_w32(const __m256i u) {
   const __m256i beta_m = SET1_w32((1 << GFq_bits) - 1);
@@ -215,7 +222,7 @@ pmod_mat_w32_t GF_mod_w32(const __m256i u) {
 }
 
 pmod_mat_w32_t GF_inv_w32(pmod_mat_w32_t x) {
-  uint16_t exp = MEDS_p - 2;
+  uint8_t exp = MEDS_p - 2; // originally: uint16_t
   pmod_mat_w32_t t = SET1_w32(1);
 
   while (exp > 0) {
