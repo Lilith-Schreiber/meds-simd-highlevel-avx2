@@ -3,19 +3,19 @@
 #define NROUNDS 24
 #define ROL_w64(a, offset) XOR_w64(SLLI_w64(a, offset), SRLI_w64(a, (64 - offset)))
 
-static pmod_mat_w64_t load64_w64(const pmod_mat_w64_t x[8]) {
+static pmod_mat_w64_t load64_w64(const pmod_mat_w64_t x[4]) {
   unsigned int i;
   pmod_mat_w64_t r = SET1_w64(0);
 
-  for (i = 0; i < 8; i++) r = OR_w64(r, SLLI_w64(x[i], 8 * i));
+  for (i = 0; i < 4; i++) r = OR_w64(r, SLLI_w64(x[i], 4 * i));
 
   return r;
 }
 
-static void store64_w64(pmod_mat_w64_t x[8], pmod_mat_w64_t u) {
+static void store64_w64(pmod_mat_w64_t x[4], pmod_mat_w64_t u) {
   unsigned int i;
 
-  for (i = 0; i < 8; i++) x[i] = SRLI_w64(u, 8 * i);
+  for (i = 0; i < 4; i++) x[i] = SRLI_w64(u, 4 * i);
 }
 
 /* Keccak round constants */
