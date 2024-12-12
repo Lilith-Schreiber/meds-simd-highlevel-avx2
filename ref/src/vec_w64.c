@@ -177,10 +177,10 @@ __mmask8 NEQ_w64(__m256i a, __m256i b) {
 }
 
 uint64_t extract_vec_w64(__m256i x, int pos) {  
-  uint64_t buf[8] aligned;
+  uint64_t buf[4] aligned;
   STORE_w64(buf, x);
   return buf[pos];
 }
 
-uint32_t extract_mask_w64(__mmask8 x, int pos) { return ((uint32_t)x) & (1 << pos); }
+uint32_t extract_mask_w64(pmod_mat_mask_w64_t x, int pos) { return ((uint32_t)x) & (1 << pos); }
 
