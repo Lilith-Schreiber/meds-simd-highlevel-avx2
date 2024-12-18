@@ -19,7 +19,7 @@
 pmod_mat_w64_t ADD_M_w64(pmod_mat_w64_t a, pmod_mat_w64_t b, pmod_mat_mask_w64_t m);
 pmod_mat_w64_t SUB_M_w64(pmod_mat_w64_t a, pmod_mat_w64_t b, pmod_mat_mask_w64_t m);
 
-#define MULLO_w64(a, b) _mm256_mullo_epi32(a, b) // no 64, and 32 and 64 are almost the same
+#define MULLO_w64(a, b) _mm256_mullo_epi32(a, b)
 
 #define SRLI_w64(a, b) _mm256_srli_epi64(a, b)
 #define SLLI_w64(a, b) _mm256_slli_epi64(a, b)
@@ -45,7 +45,7 @@ __mmask8 NEQ_w64(__m256i a, __m256i b);
 #define SET1_CT_w64(a) {a, a, a, a, a, a, a, a}
 #define SET1_w64(a) _mm256_set1_epi64x(a)
 
-#define LOAD_w64(a) _mm256_loadu_si256(a) // if there is something wrong with this function, add `&` for the parameter input
+#define LOAD_w64(a) _mm256_loadu_si256(a)
 #define STORE_w64(a, b) _mm256_store_si256(a, b)
 
 uint64_t extract_vec_w64(pmod_mat_w64_t x, int pos);
