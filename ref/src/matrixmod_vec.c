@@ -1,8 +1,8 @@
 #include "matrixmod_vec.h"
 
 pmod_mat_w32_t pmod_mat_entry_w32(uint16_t *M[], int M_r, int M_c, int r, int c) {
-  uint32_t M_buf[16] aligned = {0};
-  for (int i = 0; i < 16; i++) {
+  uint32_t M_buf[8] aligned = {0};
+  for (int i = 0; i < 8; i++) {
     M_buf[i] = pmod_mat_entry(M[i], M_r, M_c, r, c);
   }
 
@@ -11,8 +11,8 @@ pmod_mat_w32_t pmod_mat_entry_w32(uint16_t *M[], int M_r, int M_c, int r, int c)
 
 void pmod_mat_set_entry_w32(uint16_t *M[], int M_r, int M_c, int r, int c,
                             pmod_mat_w32_t val, int num) {
-  uint32_t buf[16] aligned = {0};
-  STORE_w32((int *)buf, val);
+  uint32_t buf[8] aligned = {0};
+  STORE_w32((int*)buf, val);
 
   for (int i = 0; i < num; i++) {
     const pmod_mat_t entry = buf[i];
@@ -85,12 +85,12 @@ pmod_mat_mask_w32_t pmod_mat_inv_w32(pmod_mat_w32_t *M_inv, pmod_mat_w32_t *M, i
       pmod_mat_set_entry(M_inv, M_r, M_r, i, j, zero);
   for (int i = 0; i < M_r; i++) pmod_mat_set_entry(M_inv, M_r, M_r, i, i, one);
 
-  __mmask16 valid = 0xFFFF;
+  __mmask8 valid = 0xFF;
 
   for (int r = 0; r < M_r; r++) {
     for (int r2 = r + 1; r2 < M_r; r2++) {
       pmod_mat_w32_t Mrr = pmod_mat_entry(M_prime, M_r, M_r, r, r);
-      __mmask16 Mrr_eq_zero = EQ_w32(Mrr, zero);
+      __mmask8 Mrr_eq_zero = EQ_w32(Mrr, zero);
 
       for (int c = r; c < M_r; c++) {
         pmod_mat_w32_t val = pmod_mat_entry(M_prime, M_r, M_r, r2, c);
@@ -109,7 +109,7 @@ pmod_mat_mask_w32_t pmod_mat_inv_w32(pmod_mat_w32_t *M_inv, pmod_mat_w32_t *M, i
     }
 
     pmod_mat_w32_t val = pmod_mat_entry(M_prime, M_r, M_r, r, r);
-    __mmask16 val_neq_zero = NEQ_w32(val, zero);
+    __mmask8 val_neq_zero = NEQ_w32(val, zero);
     valid = valid & val_neq_zero;
 
     val = GF_inv_w32(val);
