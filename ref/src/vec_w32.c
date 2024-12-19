@@ -62,7 +62,7 @@ __mmask8 GT_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 GE_w32(__m256i a, __m256i b) {
-	__mmask8 r = 0x0;
+	__mmask8 r = 0x00;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
@@ -82,7 +82,7 @@ __mmask8 GE_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 LT_w32(__m256i a, __m256i b) {
-	__mmask8 r = 0x0;
+	__mmask8 r = 0x00;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
@@ -102,7 +102,7 @@ __mmask8 LT_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 LE_w32(__m256i a, __m256i b) {
-	__mmask8 r = 0x0;
+	__mmask8 r = 0x00;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
@@ -122,7 +122,7 @@ __mmask8 LE_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 EQ_w32(__m256i a, __m256i b) {
-	__mmask8 r = 0x0;
+	__mmask8 r = 0x00;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
@@ -142,7 +142,7 @@ __mmask8 EQ_w32(__m256i a, __m256i b) {
 }
 
 __mmask8 NEQ_w32(__m256i a, __m256i b) {
-	__mmask8 r = 0x0;
+	__mmask8 r = 0x00;
 
         __m256 tmpA = _mm256_cvtepi32_ps(a);
         __m256 tmpB = _mm256_cvtepi32_ps(b);
