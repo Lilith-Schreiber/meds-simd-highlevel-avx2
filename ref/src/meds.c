@@ -21,10 +21,10 @@ int crypto_sign_keypair_vec(unsigned char *pk, unsigned char *sk) {
 
   pmod_mat_t G_data[MEDS_s][MEDS_k * MEDS_m * MEDS_n];
   pmod_mat_t G_dump[MEDS_k * MEDS_m * MEDS_n];
-  pmod_mat_t *G[MEDS_s << 1];
+  pmod_mat_t *G[MEDS_s];
 
   for (int i = 0; i < MEDS_s; i++) G[i] = G_data[i];
-  for (int i = MEDS_s; i < MEDS_s << 1; i++) G[i] = G_dump;
+  for (int i = MEDS_s; i < MEDS_s; i++) G[i] = G_dump;
 
   uint8_t sigma_G0[MEDS_pub_seed_bytes];
   uint8_t sigma[MEDS_sec_seed_bytes];
