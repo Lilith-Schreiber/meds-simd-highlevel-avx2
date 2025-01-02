@@ -10,7 +10,7 @@ The submission document with the MEDS specificaiton can be found [here](https://
 
 ## Compile
 
-The buil system of the reference implementation in directory `/ref` can be created
+The build system of the reference implementation in directory `/ref` can be created
 using the provided `CMakeLists.txt`.
 
 To generate the Makefile, create `/ref/build` and run cmake in the directory
