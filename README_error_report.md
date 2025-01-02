@@ -1,4 +1,4 @@
-# MEDS
+# MEDS (SIMD)
 
 This is a separated README file that states the current states and error messages of MEDS digital signature implementation.
 
